@@ -1,3 +1,38 @@
+# Enhanced Profile Template
+
+An enhanced version of the mixmi profile template with advanced features and improved user experience.
+
+## Features
+
+### Image Handling
+- Image upload with drag & drop support
+- Interactive image cropping interface
+- GIF support with automatic size validation
+- Automatic compression for large files
+
+### UI/UX
+- Sticky navigation with blur effect
+- Progressive loading for projects and videos
+- Smooth transitions and animations
+- Responsive layout for all devices
+
+### Content Management
+- Social media integration
+- Project showcase with thumbnails
+- YouTube video embedding
+- Interactive sticker selection
+- Local storage persistence
+
+### Developer Features
+- TypeScript support
+- Component-based architecture
+- Error handling and validation
+- Loading states and fallbacks
+
+## Getting Started
+
+1. Clone the repository
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
