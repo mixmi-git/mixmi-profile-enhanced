@@ -22,6 +22,18 @@ import ReactCrop, { Crop } from 'react-image-crop'
 import 'react-image-crop/dist/ReactCrop.css'
 import { parseGIF, decompressFrames } from 'gifuct-js'
 
+// Add custom TikTok icon component
+const TikTokIcon = () => (
+  <svg 
+    viewBox="0 0 24 24" 
+    className="h-5 w-5 sm:h-6 sm:w-6" 
+    fill="currentColor"
+    aria-hidden="true"
+  >
+    <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/>
+  </svg>
+)
+
 interface NavbarProps {
   isLoggedIn: boolean;
   onLoginToggle: () => void;
@@ -40,9 +52,12 @@ export interface Project {
   link: string;
 }
 
-export interface Video {
+export interface MediaItem {
   id: string;
   title: string;
+  type: 'youtube' | 'soundcloud' | 'soundcloud-playlist' | 'spotify' | 'spotify-playlist' | 'apple-music-playlist';
+  embedUrl?: string;
+  rawUrl?: string;
 }
 
 export interface Profile {
@@ -72,6 +87,96 @@ interface CropState {
   aspect: number
   imageRef: HTMLImageElement | null
   completedCrop: Crop | null
+}
+
+// Add this component before the main Component
+const MediaEmbed = ({ item }: { item: MediaItem }) => {
+  // Adjust aspect ratios for different media types
+  const getAspectRatio = () => {
+    switch (item.type) {
+      case 'youtube':
+        return 'pb-[56.25%]' // 16:9 ratio
+      case 'soundcloud':
+        return 'pb-[300px]'  // Fixed height for tracks
+      case 'soundcloud-playlist':
+        return 'pb-[400px]'  // Taller height for playlists
+      case 'spotify':
+        return 'pb-[152px]'  // Single track
+      case 'spotify-playlist':
+        return 'pb-[380px]'  // Playlist height
+      case 'apple-music-playlist':
+        return 'pb-[450px]'  // Apple Music playlist height
+      default:
+        return 'pb-[56.25%]'
+    }
+  }
+
+  switch (item.type) {
+    case 'youtube':
+      return (
+        <div className="relative pb-[56.25%] h-0">
+          <iframe
+            className="absolute top-0 left-0 w-full h-full"
+            src={`https://www.youtube.com/embed/${item.id}`}
+            allow="autoplay; encrypted-media"
+            allowFullScreen
+            loading="lazy"
+          />
+        </div>
+      )
+    case 'soundcloud':
+    case 'soundcloud-playlist':
+      return (
+        <div className={`relative ${getAspectRatio()} h-0`}>
+          <iframe
+            className="absolute top-0 left-0 w-full h-full"
+            scrolling="no"
+            frameBorder="no"
+            allow="autoplay"
+            src={item.id}
+            style={{ background: 'transparent' }}  // Add this to fix black background
+          />
+        </div>
+      )
+    case 'spotify':
+      return (
+        <div className="relative pb-[152px] h-0">
+          <iframe
+            className="absolute top-0 left-0 w-full h-full"
+            src={`https://open.spotify.com/embed/track/${item.id}`}
+            allow="encrypted-media"
+          />
+        </div>
+      )
+    case 'spotify-playlist':
+      return (
+        <div className={`relative ${getAspectRatio()} h-0`}>
+          <iframe
+            className="absolute top-0 left-0 w-full h-full"
+            src={`https://open.spotify.com/embed/playlist/${item.id}`}
+            allow="encrypted-media"
+            loading="lazy"
+            style={{ background: 'transparent' }}
+          />
+        </div>
+      )
+    case 'apple-music-playlist':
+      return (
+        <div className={`relative ${getAspectRatio()} h-0`}>
+          <iframe
+            className="absolute top-0 left-0 w-full h-full"
+            allow="autoplay *; encrypted-media *; fullscreen *"
+            frameBorder="0"
+            height="450"
+            style={{ width: '100%', maxWidth: '660px', overflow: 'hidden', background: 'transparent' }}
+            sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-storage-access-by-user-activation allow-top-navigation-by-user-activation"
+            src={item.id}
+          />
+        </div>
+      )
+    default:
+      return null
+  }
 }
 
 function Navbar({ isLoggedIn, onLoginToggle }: NavbarProps) {
@@ -104,9 +209,98 @@ function Navbar({ isLoggedIn, onLoginToggle }: NavbarProps) {
   )
 }
 
+// Add these helper functions
+const extractMediaId = (url: string, type: MediaItem['type']): string => {
+  try {
+    switch (type) {
+      case 'youtube':
+        const ytRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/
+        const ytMatch = url.match(ytRegex)
+        return ytMatch ? ytMatch[1] : url
+
+      case 'soundcloud':
+      case 'soundcloud-playlist':
+        const iframeSrcRegex = /src="([^"]+)"/
+        const iframeMatch = url.match(iframeSrcRegex)
+        if (iframeMatch) return iframeMatch[1]
+        
+        const scRegex = /soundcloud\.com\/([^\/]+\/(?:sets\/)?[^\/]+)/
+        const scMatch = url.match(scRegex)
+        return scMatch 
+          ? `https://w.soundcloud.com/player/?url=https://soundcloud.com/${scMatch[1]}&color=%23ff5500&auto_play=false&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true&visual=true`
+          : url
+
+      case 'spotify':
+        const spRegex = /spotify\.com\/track\/([a-zA-Z0-9]+)/
+        const spMatch = url.match(spRegex)
+        return spMatch ? spMatch[1] : url
+
+      case 'spotify-playlist':
+        const spPlaylistRegex = /spotify\.com\/playlist\/([a-zA-Z0-9]+)/
+        const spPlaylistMatch = url.match(spPlaylistRegex)
+        return spPlaylistMatch ? spPlaylistMatch[1] : url
+
+      case 'apple-music-playlist':
+        try {
+          // Clean up the URL first
+          const cleanUrl = url.replace(/^@/, '').trim()
+          
+          // Extract the important parts
+          const match = cleanUrl.match(/music\.apple\.com\/([^\/]+)\/playlist\/([^\/]+)\/([^\/\?]+)/)
+          if (match) {
+            const [_, country, playlistName, playlistId] = match
+            // Construct the embed URL
+            return `https://embed.music.apple.com/${country}/playlist/${encodeURIComponent(playlistName)}/${playlistId}`
+          }
+          return url
+        } catch (error) {
+          console.error('Error parsing Apple Music URL:', error)
+          return url
+        }
+
+      default:
+        return url
+    }
+  } catch (error) {
+    console.error('Error parsing URL:', error)
+    return url
+  }
+}
+
+// Add this validation function
+const isValidAppleMusicUrl = (url: string): boolean => {
+  // Check for basic Apple Music URL structure
+  const validUrlPattern = /^https:\/\/music\.apple\.com\/[a-z]{2}\/(album|playlist)\/[^\/]+\/[0-9]+(\?.*)?$/i
+  return validUrlPattern.test(url)
+}
+
+// Add this helper function to detect media type from URL
+const detectMediaType = (url: string): MediaItem['type'] => {
+  if (url.includes('youtube.com') || url.includes('youtu.be')) {
+    return 'youtube'
+  }
+  if (url.includes('soundcloud.com')) {
+    return url.includes('/sets/') ? 'soundcloud-playlist' : 'soundcloud'
+  }
+  if (url.includes('spotify.com')) {
+    return url.includes('/playlist/') ? 'spotify-playlist' : 'spotify'
+  }
+  if (url.includes('music.apple.com')) {
+    return 'apple-music-playlist'
+  }
+  return 'youtube' // default
+}
+
+const defaultStickerImage = "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/daisy-blue-1sqZRfemKwLyREL0Eo89EfmQUT5wst.png"
+
 export default function Component() {
   // Move these functions to the top of the component
-  const saveToLocalStorage = (data: Profile) => {
+  const saveToLocalStorage = (data: {
+    profile: Profile;
+    projects: Project[];
+    mediaItems: MediaItem[];
+    sticker: Sticker;
+  }) => {
     try {
       localStorage.setItem('userProfile', JSON.stringify(data))
     } catch (error) {
@@ -114,10 +308,19 @@ export default function Component() {
     }
   }
 
-  const loadFromLocalStorage = (): Profile | null => {
+  const loadFromLocalStorage = () => {
     try {
       const saved = localStorage.getItem('userProfile')
-      return saved ? JSON.parse(saved) : null
+      if (saved) {
+        const data = JSON.parse(saved)
+        return {
+          profile: data.profile || null,
+          projects: data.projects || [],
+          mediaItems: data.mediaItems || [],
+          sticker: data.sticker || { enabled: true, image: defaultStickerImage }
+        }
+      }
+      return null
     } catch (error) {
       console.error('Failed to load from localStorage:', error)
       return null
@@ -166,9 +369,12 @@ export default function Component() {
 
   // Add useEffect for localStorage
   useEffect(() => {
-    const savedProfile = loadFromLocalStorage()
-    if (savedProfile) {
-      setProfile(savedProfile)
+    const saved = loadFromLocalStorage()
+    if (saved) {
+      setProfile(saved.profile)
+      setProjects(saved.projects)
+      setMediaItems(saved.mediaItems)
+      setSticker(saved.sticker)
     }
     setIsLoading(false)
   }, [])
@@ -197,18 +403,21 @@ export default function Component() {
     }
   ])
 
-  const [videos, setVideos] = useState<Video[]>([
+  const [mediaItems, setMediaItems] = useState<MediaItem[]>([
     { 
       id: 'BFJu2NrIfx0', 
-      title: 'Primavera Sound'
+      title: 'Primavera Sound',
+      type: 'youtube'
     },
     { 
       id: 'A3QlF7Myeco', 
-      title: 'Mighty Morfin Jungle Set Live Nairobi'
+      title: 'Mighty Morfin Jungle Set Live Nairobi',
+      type: 'youtube'
     },
     { 
       id: 'rvGABUgyCOA', 
-      title: 'Salut Boiler Room London'
+      title: 'Salut Boiler Room London',
+      type: 'youtube'
     }
   ])
 
@@ -228,8 +437,8 @@ export default function Component() {
 
   // Add the debounced save function
   const debouncedSave = useCallback(
-    debounce((newProfile: Profile) => {
-      saveToLocalStorage(newProfile)
+    debounce((data: { profile: Profile; projects: Project[]; mediaItems: MediaItem[]; sticker: Sticker }) => {
+      saveToLocalStorage(data)
     }, 1000),
     []
   )
@@ -386,18 +595,46 @@ export default function Component() {
     setProjects(prev => prev.filter((_, i) => i !== index))
   }
 
-  const handleVideoChange = (index: number, field: string, value: string) => {
-    setVideos(prev => prev.map((video, i) => 
-      i === index ? { ...video, [field]: value } : video
-    ))
+  const handleMediaChange = (index: number, field: string, value: string) => {
+    if (field === 'id' && value) {
+      // Auto-detect media type from URL
+      const detectedType = detectMediaType(value)
+      
+      setMediaItems(prev => prev.map((item, i) => {
+        if (i === index) {
+          if (detectedType === 'apple-music-playlist') {
+            // Handle Apple Music URLs
+            const cleanUrl = value.replace(/^@/, '').trim()
+            return {
+              ...item,
+              type: detectedType,
+              id: cleanUrl,
+              rawUrl: cleanUrl.replace('music.apple.com', 'embed.music.apple.com')
+            }
+          }
+          // Handle other media types
+          const extractedId = extractMediaId(value, detectedType)
+          return {
+            ...item,
+            type: detectedType,
+            id: extractedId
+          }
+        }
+        return item
+      }))
+    } else {
+      setMediaItems(prev => prev.map((item, i) => 
+        i === index ? { ...item, [field]: value } : item
+      ))
+    }
   }
 
-  const addVideo = () => {
-    setVideos(prev => [...prev, { id: '', title: '' }])
+  const addMedia = () => {
+    setMediaItems(prev => [...prev, { id: '', title: '', type: 'youtube' }])
   }
 
-  const removeVideo = (index: number) => {
-    setVideos(prev => prev.filter((_, i) => i !== index))
+  const removeMedia = (index: number) => {
+    setMediaItems(prev => prev.filter((_, i) => i !== index))
   }
 
   const handleStickerChange = (checked: boolean) => {
@@ -504,8 +741,13 @@ export default function Component() {
       return
     }
 
-    // Save to localStorage
-    saveToLocalStorage(profile)
+    // Save all data
+    saveToLocalStorage({
+      profile,
+      projects,
+      mediaItems,
+      sticker
+    })
     setIsEditing(false)
   }
 
@@ -558,7 +800,16 @@ export default function Component() {
   }
 
   const loadMoreVideos = () => {
-    setVisibleVideos(prev => Math.min(prev + 2, videos.length))
+    // Calculate how many items we need to show to complete the next row
+    const itemsPerRow = 3; // Number of items in a full row
+    const currentItems = visibleVideos;
+    const totalItems = mediaItems.length;
+    
+    // Calculate the next multiple of 3 that would include all remaining items up to the next complete row
+    const nextRowCount = Math.ceil((currentItems + 1) / itemsPerRow) * itemsPerRow;
+    
+    // Set new visible count, but don't exceed total items
+    setVisibleVideos(Math.min(nextRowCount, totalItems));
   }
 
   // Add back the return statement with all the JSX
@@ -589,8 +840,8 @@ export default function Component() {
             `
           }} />
           <Navbar isLoggedIn={isLoggedIn} onLoginToggle={handleLoginToggle} />
-          <div className="p-4 sm:p-8 md:p-12 lg:p-16">
-            <div className={`max-w-6xl mx-auto transition-opacity duration-150 ${
+          <div className="p-4 sm:p-8 md:p-12 lg:p-16 min-h-screen flex flex-col">
+            <div className={`max-w-6xl mx-auto w-full flex-grow transition-opacity duration-150 ${
               isTransitioning ? 'opacity-0' : 'opacity-100'
             }`}>
               {isLoggedIn && isEditing ? (
@@ -697,11 +948,12 @@ export default function Component() {
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="youtube">YouTube</SelectItem>
+                              <SelectItem value="tiktok">TikTok</SelectItem>
                               <SelectItem value="instagram">Instagram</SelectItem>
                               <SelectItem value="twitter">Twitter</SelectItem>
-                              <SelectItem value="linkedin">LinkedIn</SelectItem>
                               <SelectItem value="spotify">Spotify</SelectItem>
                               <SelectItem value="soundcloud">SoundCloud</SelectItem>
+                              <SelectItem value="linkedin">LinkedIn</SelectItem>
                             </SelectContent>
                           </Select>
                           <Input
@@ -794,38 +1046,51 @@ export default function Component() {
                     </div>
 
                     <div>
-                      <h3 className="text-lg font-semibold mb-2">Videos</h3>
+                      <h3 className="text-lg font-semibold mb-2">Media</h3>
                       <Accordion type="single" collapsible className="w-full">
-                        {videos.map((video, index) => (
-                          <AccordionItem key={index} value={`video-${index}`}>
+                        {mediaItems.map((media, index) => (
+                          <AccordionItem key={index} value={`media-${index}`}>
                             <AccordionTrigger className="text-left">
-                              {video.title || `Video ${index + 1}`}
+                              {media.title || `Media ${index + 1}`}
                             </AccordionTrigger>
                             <AccordionContent>
                               <Card className="mb-4 p-4 bg-gray-700">
                                 <CardContent className="space-y-4">
                                   <div>
-                                    <Label htmlFor={`video-id-${index}`}>YouTube Video ID</Label>
-                                    <Input
-                                      id={`video-id-${index}`}
-                                      value={video.id}
-                                      onChange={(e) => handleVideoChange(index, 'id', e.target.value)}
-                                      className="mt-1"
-                                      placeholder="Enter YouTube video ID"
-                                    />
+                                    <Label htmlFor={`media-url-${index}`}>Media URL</Label>
+                                    <div className="space-y-2">
+                                      <Input
+                                        id={`media-url-${index}`}
+                                        value={media.rawUrl || media.id}
+                                        onChange={(e) => {
+                                          const value = e.target.value
+                                          const detectedType = detectMediaType(value)
+                                          const extractedId = extractMediaId(value, detectedType)
+                                          
+                                          setMediaItems(prev => prev.map((item, i) => 
+                                            i === index ? {
+                                              ...item,
+                                              type: detectedType,
+                                              id: extractedId,
+                                              rawUrl: value
+                                            } : item
+                                          ))
+                                        }}
+                                        placeholder="Paste URL from YouTube, SoundCloud, Spotify, or Apple Music"
+                                      />
+                                      <p className="text-xs text-gray-400">
+                                        Supports: YouTube videos, SoundCloud tracks & playlists, Spotify tracks & playlists, Apple Music playlists
+                                      </p>
+                                    </div>
+                                    {media.id && (
+                                      <div className="mt-4 border border-gray-700 rounded-lg overflow-hidden">
+                                        <MediaEmbed item={media} />
+                                      </div>
+                                    )}
                                   </div>
-                                  <div>
-                                    <Label htmlFor={`video-title-${index}`}>Video Title</Label>
-                                    <Input
-                                      id={`video-title-${index}`}
-                                      value={video.title}
-                                      onChange={(e) => handleVideoChange(index, 'title', e.target.value)}
-                                      className="mt-1"
-                                      placeholder="Enter video title"
-                                    />
-                                  </div>
-                                  <Button type="button" variant="destructive" onClick={() => removeVideo(index)}>
-                                    <Trash2 className="w-4 h-4 mr-2" /> Remove Video
+
+                                  <Button type="button" variant="destructive" onClick={() => removeMedia(index)}>
+                                    <Trash2 className="w-4 h-4 mr-2" /> Remove Media
                                   </Button>
                                 </CardContent>
                               </Card>
@@ -833,8 +1098,8 @@ export default function Component() {
                           </AccordionItem>
                         ))}
                       </Accordion>
-                      <Button type="button" onClick={addVideo} className="mt-2">
-                        <Plus className="w-4 h-4 mr-2" /> Add Video
+                      <Button type="button" onClick={() => setMediaItems(prev => [...prev, { id: '', title: '', type: 'youtube' }])} className="mt-2">
+                        <Plus className="w-4 h-4 mr-2" /> Add Media
                       </Button>
                     </div>
 
@@ -1010,17 +1275,38 @@ export default function Component() {
                               case 'linkedin':
                                 Icon = Linkedin
                                 break
+                              case 'tiktok':
+                                Icon = TikTokIcon
+                                break
                               default:
                                 Icon = User
                             }
-                            return link.url ? (
-                              <Button key={index} variant="ghost" size="icon" className="w-10 h-10 sm:w-12 sm:h-12" asChild>
-                                <a href={link.url} target="_blank" rel="noopener noreferrer">
-                                  <Icon className="h-5 w-5 sm:h-6 sm:w-6" />
-                                  <span className="sr-only">{link.platform}</span>
-                                </a>
+                            
+                            // Show greyed out icon if no URL
+                            return (
+                              <Button 
+                                key={index} 
+                                variant="ghost" 
+                                size="icon" 
+                                className={`w-10 h-10 sm:w-12 sm:h-12 group relative ${!link.url ? 'opacity-40 hover:opacity-100' : ''}`}
+                                asChild={!!link.url}
+                              >
+                                {link.url ? (
+                                  <a href={link.url} target="_blank" rel="noopener noreferrer">
+                                    <Icon className="h-5 w-5 sm:h-6 sm:w-6" />
+                                    <span className="sr-only">{link.platform}</span>
+                                  </a>
+                                ) : (
+                                  <div className="relative">
+                                    <Icon className="h-5 w-5 sm:h-6 sm:w-6" />
+                                    <span className="sr-only">{link.platform}</span>
+                                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                                      Add {link.platform} link
+                                    </div>
+                                  </div>
+                                )}
                               </Button>
-                            ) : null
+                            )
                           })}
                         </div>
 
@@ -1032,7 +1318,7 @@ export default function Component() {
                       </div>
                     </div>
                   </div>
-                  <div className="mt-16 sm:mt-24 max-w-6xl mx-auto px-4">
+                  <div className="mt-16 sm:mt-24 max-w-6xl mx-auto px-4 mb-24">
                     <h2 className="text-4xl font-bold text-white text-center mb-12">PROJECTS and PEOPLE</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                       {projectsLoading ? (
@@ -1098,7 +1384,7 @@ export default function Component() {
                       )}
                     </div>
                   </div>
-                  <div className="mt-16 sm:mt-24 max-w-6xl mx-auto px-4">
+                  <div className="mt-16 sm:mt-24 max-w-6xl mx-auto px-4 mb-24">
                     <h2 className="text-4xl font-bold text-white text-center mb-12">MEDIA</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                       {videosLoading ? (
@@ -1113,33 +1399,22 @@ export default function Component() {
                         ))
                       ) : (
                         <>
-                          {videos.slice(0, visibleVideos).map((video, index) => (
+                          {mediaItems.slice(0, visibleVideos).map((video, index) => (
                             <Card key={index} className="w-full max-w-[560px] mx-auto">
                               <CardContent className="p-4">
-                                <div className="relative pb-[56.25%] h-0">
-                                  <iframe
-                                    className="absolute top-0 left-0 w-full h-full"
-                                    width="100%"
-                                    height="315"
-                                    src={`https://www.youtube.com/embed/${video.id}`}
-                                    frameBorder="0"
-                                    allow="autoplay; encrypted-media"
-                                    allowFullScreen
-                                    loading="lazy"
-                                    rel="noopener noreferrer"
-                                  ></iframe>
-                                </div>
+                                <MediaEmbed item={video} />
                                 <h3 className="mt-2 text-lg font-semibold text-white">{video.title}</h3>
                               </CardContent>
                             </Card>
                           ))}
-                          {visibleVideos < videos.length && (
+                          {console.log('Total items:', mediaItems.length, 'Visible items:', visibleVideos)}
+                          {mediaItems.length > visibleVideos && (
                             <Button 
                               onClick={loadMoreVideos}
                               variant="ghost" 
                               className="col-span-full mx-auto mt-4"
                             >
-                              Load More Videos
+                              Load More Media ({mediaItems.length - visibleVideos} more)
                             </Button>
                           )}
                         </>
@@ -1147,7 +1422,7 @@ export default function Component() {
                     </div>
                   </div>
                   {sticker.enabled && (
-                    <div className="relative w-[200px] h-[200px] mx-auto mt-16">
+                    <div className="relative w-[200px] h-[200px] mx-auto mt-auto pt-8 pb-16">
                       <div className="sticker-rotate">
                         <Image
                           src={sticker.image}
