@@ -67,6 +67,11 @@ export interface Profile {
   bio: string;
   image: string;
   socialLinks: SocialLink[];
+  sectionVisibility: {
+    projects: boolean;
+    media: boolean;
+    shop: boolean;
+  };
 }
 
 // Add interface for form errors
@@ -385,13 +390,51 @@ export default function Component(): JSX.Element {
       if (saved) {
         const data = JSON.parse(saved)
         return {
-          profile: data.profile || null,
+          profile: data.profile || {
+            name: "Your Name",
+            title: "Your Role / Title",
+            bio: "Tell your story here...",
+            image: "/images/placeholder.png",
+            socialLinks: [
+              { platform: "youtube", url: "" },
+              { platform: "spotify", url: "" },
+              { platform: "soundcloud", url: "" },
+              { platform: "instagram", url: "" }
+            ],
+            sectionVisibility: {
+              projects: true,
+              media: true,
+              shop: true
+            }
+          },
           projects: data.projects || [],
           mediaItems: data.mediaItems || [],
           sticker: data.sticker || { enabled: true, image: defaultStickerImage }
         }
       }
-      return null
+      // Return default values if no saved data
+      return {
+        profile: {
+          name: "Your Name",
+          title: "Your Role / Title",
+          bio: "Tell your story here...",
+          image: "/images/placeholder.png",
+          socialLinks: [
+            { platform: "youtube", url: "" },
+            { platform: "spotify", url: "" },
+            { platform: "soundcloud", url: "" },
+            { platform: "instagram", url: "" }
+          ],
+          sectionVisibility: {
+            projects: true,
+            media: true,
+            shop: true
+          }
+        },
+        projects: [],
+        mediaItems: [],
+        sticker: { enabled: true, image: defaultStickerImage }
+      }
     } catch (error) {
       console.error('Failed to load from localStorage:', error)
       return null
@@ -434,7 +477,12 @@ export default function Component(): JSX.Element {
       { platform: "spotify", url: "" },
       { platform: "soundcloud", url: "" },
       { platform: "instagram", url: "" }
-    ]
+    ],
+    sectionVisibility: {
+      projects: true,
+      media: true,
+      shop: true
+    }
   })
 
   // Add useEffect for localStorage
@@ -512,7 +560,12 @@ export default function Component(): JSX.Element {
               { platform: "spotify", url: "" },
               { platform: "soundcloud", url: "" },
               { platform: "instagram", url: "" }
-            ]
+            ],
+            sectionVisibility: {
+              projects: true,
+              media: true,
+              shop: true
+            }
           })
           setProjects([])
           setMediaItems([])
@@ -923,6 +976,10 @@ export default function Component(): JSX.Element {
   // Add back the return statement with all the JSX
   return (
     <div className="dark min-h-screen bg-gray-900 text-gray-100">
+      <Navbar 
+        isAuthenticated={isAuthenticated} 
+        onLoginToggle={handleLoginToggle}
+      />
       {isLoading ? (
         <div className="flex items-center justify-center min-h-screen">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white" />
@@ -947,7 +1004,6 @@ export default function Component(): JSX.Element {
               }
             `
           }} />
-          <Navbar isAuthenticated={isAuthenticated} onLoginToggle={handleLoginToggle} />
           <div className="p-4 sm:p-8 md:p-12 lg:p-16 min-h-screen flex flex-col">
             <div className={`max-w-6xl mx-auto w-full flex-grow transition-opacity duration-150 ${
               isTransitioning ? 'opacity-0' : 'opacity-100'
@@ -1096,7 +1152,12 @@ export default function Component(): JSX.Element {
                     </div>
 
                     <div className="space-y-8 pt-8 border-t border-gray-700">
-                      <h3 className="text-xl font-semibold">Projects and People</h3>
+                      <div>
+                        <h3 className="text-xl font-semibold">Projects</h3>
+                        <p className="text-sm text-gray-400 mt-2">
+                          Add and manage your projects.
+                        </p>
+                      </div>
                       <Accordion type="single" collapsible className="w-full">
                         {projects.map((project, index) => (
                           <AccordionItem key={project.id} value={`item-${index}`}>
@@ -1169,7 +1230,12 @@ export default function Component(): JSX.Element {
                     </div>
 
                     <div className="space-y-8 pt-8 border-t border-gray-700">
-                      <h3 className="text-xl font-semibold">Media</h3>
+                      <div>
+                        <h3 className="text-xl font-semibold">Media</h3>
+                        <p className="text-sm text-gray-400 mt-2">
+                          Share your music, videos, and playlists from YouTube, SoundCloud, Spotify, and Apple Music.
+                        </p>
+                      </div>
                       <Accordion type="single" collapsible className="w-full">
                         {mediaItems.map((media, index) => (
                           <AccordionItem key={index} value={`media-${index}`}>
@@ -1236,6 +1302,16 @@ export default function Component(): JSX.Element {
                     </div>
 
                     <div className="space-y-8 pt-8 border-t border-gray-700">
+                      <div>
+                        <h3 className="text-xl font-semibold">Shop</h3>
+                        <p className="text-sm text-gray-400 mt-2">
+                          Connect your online store from Shopify, Etsy, or other platforms to showcase your products.
+                        </p>
+                      </div>
+                      {/* Shop content (to be added) */}
+                    </div>
+
+                    <div className="space-y-8 pt-8 border-t border-gray-700">
                       <h3 className="text-xl font-semibold">Profile Sticker</h3>
                       <div className="space-y-4">
                         <div className="flex items-center space-x-2">
@@ -1259,7 +1335,13 @@ export default function Component(): JSX.Element {
                                 <SelectItem value="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/daisy-blue-1sqZRfemKwLyREL0Eo89EfmQUT5wst.png">
                                   <div className="flex items-center">
                                     <div className="w-8 h-8 mr-2 relative">
-                                      <Image src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/daisy-blue-1sqZRfemKwLyREL0Eo89EfmQUT5wst.png" alt="Blue Daisy" fill className="object-contain" />
+                                      <Image 
+                                        src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/daisy-blue-1sqZRfemKwLyREL0Eo89EfmQUT5wst.png" 
+                                        alt="Blue Daisy" 
+                                        fill 
+                                        className="object-contain"
+                                        unoptimized
+                                      />
                                     </div>
                                     Blue Daisy
                                   </div>
@@ -1283,13 +1365,14 @@ export default function Component(): JSX.Element {
                               </SelectContent>
                             </Select>
                             
-                            {/* Preview of selected sticker */}
+                            {/* Preview */}
                             <div className="w-20 h-20 relative mx-auto sticker-rotate">
                               <Image
                                 src={sticker.image}
                                 alt="Selected sticker preview"
                                 fill
                                 className="object-contain"
+                                unoptimized
                               />
                             </div>
                           </div>
@@ -1300,7 +1383,9 @@ export default function Component(): JSX.Element {
                       <Button type="button" variant="outline" onClick={() => setIsEditing(false)}>
                         Cancel
                       </Button>
-                      <Button type="submit">Save Changes</Button>
+                      <Button type="submit">
+                        Save
+                      </Button>
                     </div>
                   </form>
                   {showCropDialog && (
@@ -1438,98 +1523,108 @@ export default function Component(): JSX.Element {
                       </div>
                     </div>
                   </div>
-                  <div className="mt-16 sm:mt-24 max-w-6xl mx-auto px-4 mb-24">
-                    <h2 className="text-4xl font-bold text-white text-center mb-12">PROJECTS and PEOPLE</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                      {projectsLoading ? (
-                        // Show skeleton loading cards
-                        Array(3).fill(0).map((_, i) => (
-                          <Card key={i} className="bg-gray-800/50 border-gray-700 overflow-hidden min-h-[5rem] animate-pulse">
-                            <div className="flex h-full">
-                              <div className="w-24 bg-gray-700"></div>
-                              <div className="p-3 flex-grow">
-                                <div className="h-4 bg-gray-700 rounded w-3/4 mb-2"></div>
-                                <div className="h-3 bg-gray-700 rounded w-1/2"></div>
+                  {profile.sectionVisibility.projects && (
+                    <div className="mt-16 sm:mt-24 max-w-6xl mx-auto px-4 mb-24">
+                      <h2 className="text-4xl font-bold text-white text-center mb-12">PROJECTS and PEOPLE</h2>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                        {projectsLoading ? (
+                          // Show skeleton loading cards
+                          Array(3).fill(0).map((_, i) => (
+                            <Card key={i} className="bg-gray-800/50 border-gray-700 overflow-hidden min-h-[5rem] animate-pulse">
+                              <div className="flex h-full">
+                                <div className="w-24 bg-gray-700"></div>
+                                <div className="p-3 flex-grow">
+                                  <div className="h-4 bg-gray-700 rounded w-3/4 mb-2"></div>
+                                  <div className="h-3 bg-gray-700 rounded w-1/2"></div>
+                                </div>
                               </div>
-                            </div>
-                          </Card>
-                        ))
-                      ) : (
-                        <>
-                          {projects.slice(0, visibleProjects).map((project) => (
-                            <Card 
-                              key={project.id} 
-                              className="bg-gray-800/50 border-gray-700 overflow-hidden min-h-[5rem] opacity-0 animate-fadeIn"
-                              style={{
-                                animationDelay: `${project.id * 150}ms`,
-                                animationFillMode: 'forwards'
-                              }}
-                            >
-                              <Link 
-                                href={project.link} 
-                                className="flex h-full group"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                referrerPolicy="no-referrer"
+                            </Card>
+                          ))
+                        ) : (
+                          <>
+                            {projects.slice(0, visibleProjects).map((project) => (
+                              <Card 
+                                key={project.id} 
+                                className="bg-gray-800/50 border-gray-700 overflow-hidden min-h-[5rem] opacity-0 animate-fadeIn"
+                                style={{
+                                  animationDelay: `${project.id * 150}ms`,
+                                  animationFillMode: 'forwards'
+                                }}
                               >
-                                <div className="flex h-full">
-                                  <div className="relative w-24 h-full p-1">
-                                    <div className="relative w-full h-full rounded-[3px] overflow-hidden">
-                                      <Image
-                                        src={project.image}
-                                        alt={project.title}
-                                        fill
-                                        className="object-cover"
-                                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                                      />
+                                <Link 
+                                  href={project.link} 
+                                  className="flex h-full group"
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  referrerPolicy="no-referrer"
+                                >
+                                  <div className="flex h-full">
+                                    <div className="relative w-24 h-full p-1">
+                                      <div className="relative w-full h-full rounded-[3px] overflow-hidden">
+                                        <Image
+                                          src={project.image}
+                                          alt={project.title}
+                                          fill
+                                          className="object-cover"
+                                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                                        />
+                                      </div>
+                                    </div>
+                                    <div className="p-3 flex flex-col justify-center flex-grow">
+                                      <h3 className="text-lg font-bold text-white mb-1">{project.title}</h3>
+                                      <p className="text-sm text-gray-300 line-clamp-2">{project.description}</p>
                                     </div>
                                   </div>
-                                  <div className="p-3 flex flex-col justify-center flex-grow">
-                                    <h3 className="text-lg font-bold text-white mb-1">{project.title}</h3>
-                                    <p className="text-sm text-gray-300 line-clamp-2">{project.description}</p>
-                                  </div>
-                                </div>
-                              </Link>
+                                </Link>
+                              </Card>
+                            ))}
+                            {visibleProjects < projects.length && (
+                              <Button 
+                                onClick={loadMoreProjects}
+                                variant="ghost" 
+                                className="col-span-full mx-auto mt-4"
+                              >
+                                Load More Projects
+                              </Button>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  {profile.sectionVisibility.media && (
+                    <div className="mt-16 sm:mt-24 max-w-6xl mx-auto px-4 mb-24">
+                      <h2 className="text-4xl font-bold text-white text-center mb-12">MEDIA</h2>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                        {videosLoading ? (
+                          // Show skeleton loading cards
+                          Array(2).fill(0).map((_, i) => (
+                            <Card key={i} className="w-full max-w-[560px] mx-auto animate-pulse">
+                              <CardContent className="p-4">
+                                <div className="aspect-video bg-gray-700 rounded mb-2"></div>
+                                <div className="h-4 bg-gray-700 rounded w-3/4"></div>
+                              </CardContent>
                             </Card>
-                          ))}
-                          {visibleProjects < projects.length && (
-                            <Button 
-                              onClick={loadMoreProjects}
-                              variant="ghost" 
-                              className="col-span-full mx-auto mt-4"
-                            >
-                              Load More Projects
-                            </Button>
-                          )}
-                        </>
-                      )}
+                          ))
+                        ) : (
+                          // Only show first 6 items
+                          mediaItems.slice(0, 6).map((video, index) => (
+                            <Card key={index} className="w-full max-w-[560px] mx-auto">
+                              <CardContent className="p-4">
+                                <MediaEmbed item={video} />
+                              </CardContent>
+                            </Card>
+                          ))
+                        )}
+                      </div>
                     </div>
-                  </div>
-                  <div className="mt-16 sm:mt-24 max-w-6xl mx-auto px-4 mb-24">
-                    <h2 className="text-4xl font-bold text-white text-center mb-12">MEDIA</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                      {videosLoading ? (
-                        // Show skeleton loading cards
-                        Array(2).fill(0).map((_, i) => (
-                          <Card key={i} className="w-full max-w-[560px] mx-auto animate-pulse">
-                            <CardContent className="p-4">
-                              <div className="aspect-video bg-gray-700 rounded mb-2"></div>
-                              <div className="h-4 bg-gray-700 rounded w-3/4"></div>
-                            </CardContent>
-                          </Card>
-                        ))
-                      ) : (
-                        // Only show first 6 items
-                        mediaItems.slice(0, 6).map((video, index) => (
-                          <Card key={index} className="w-full max-w-[560px] mx-auto">
-                            <CardContent className="p-4">
-                              <MediaEmbed item={video} />
-                            </CardContent>
-                          </Card>
-                        ))
-                      )}
+                  )}
+                  {profile.sectionVisibility.shop && (
+                    <div className="mt-16 sm:mt-24 max-w-6xl mx-auto px-4 mb-24">
+                      <h2 className="text-4xl font-bold text-white text-center mb-12">SHOP</h2>
+                      {/* Shop content (to be added) */}
                     </div>
-                  </div>
+                  )}
                   {sticker.enabled && (
                     <div className="relative w-[200px] h-[200px] mx-auto mt-auto pt-8 pb-16">
                       <div className="sticker-rotate">
