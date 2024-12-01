@@ -2,7 +2,7 @@
 
 import Image from "next/image"
 import Link from "next/link"
-import { useState, useCallback, useEffect } from "react"
+import { useState, useCallback, useEffect, memo } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -18,9 +18,10 @@ import {
 } from "@/components/ui/accordion"
 import { Checkbox } from "@/components/ui/checkbox"
 import { debounce } from "lodash"
-import ReactCrop, { Crop } from 'react-image-crop'
+import ReactCrop, { Crop as CropType } from 'react-image-crop'
 import 'react-image-crop/dist/ReactCrop.css'
 import { parseGIF, decompressFrames } from 'gifuct-js'
+import { useAuth } from "@/lib/auth"
 
 // Add custom TikTok icon component
 const TikTokIcon = () => (
@@ -35,7 +36,7 @@ const TikTokIcon = () => (
 )
 
 interface NavbarProps {
-  isLoggedIn: boolean;
+  isAuthenticated: boolean;
   onLoginToggle: () => void;
 }
 
@@ -54,8 +55,8 @@ export interface Project {
 
 export interface MediaItem {
   id: string;
-  title: string;
-  type: 'youtube' | 'soundcloud' | 'soundcloud-playlist' | 'spotify' | 'spotify-playlist' | 'apple-music-playlist';
+  title?: string;
+  type: 'youtube' | 'soundcloud' | 'soundcloud-playlist' | 'spotify' | 'spotify-playlist' | 'apple-music-playlist' | 'apple-music-album';
   embedUrl?: string;
   rawUrl?: string;
 }
@@ -83,14 +84,14 @@ interface Sticker {
 
 // Add these interfaces
 interface CropState {
-  crop: Crop
-  aspect: number
-  imageRef: HTMLImageElement | null
-  completedCrop: Crop | null
+  crop: CropType;
+  aspect: number;
+  imageRef: HTMLImageElement | null;
+  completedCrop: CropType | null;
 }
 
 // Add this component before the main Component
-const MediaEmbed = ({ item }: { item: MediaItem }) => {
+const MediaEmbed = memo(({ item }: { item: MediaItem }) => {
   // Adjust aspect ratios for different media types
   const getAspectRatio = () => {
     switch (item.type) {
@@ -104,8 +105,10 @@ const MediaEmbed = ({ item }: { item: MediaItem }) => {
         return 'pb-[152px]'  // Single track
       case 'spotify-playlist':
         return 'pb-[380px]'  // Playlist height
+      case 'apple-music-album':
+        return 'pb-[175px]'  // Height for album
       case 'apple-music-playlist':
-        return 'pb-[450px]'  // Apple Music playlist height
+        return 'pb-[450px]'  // Height for playlist
       default:
         return 'pb-[56.25%]'
     }
@@ -160,6 +163,7 @@ const MediaEmbed = ({ item }: { item: MediaItem }) => {
           />
         </div>
       )
+    case 'apple-music-album':
     case 'apple-music-playlist':
       return (
         <div className={`relative ${getAspectRatio()} h-0`}>
@@ -167,8 +171,13 @@ const MediaEmbed = ({ item }: { item: MediaItem }) => {
             className="absolute top-0 left-0 w-full h-full"
             allow="autoplay *; encrypted-media *; fullscreen *"
             frameBorder="0"
-            height="450"
-            style={{ width: '100%', maxWidth: '660px', overflow: 'hidden', background: 'transparent' }}
+            style={{ 
+              width: '100%', 
+              maxWidth: '660px', 
+              overflow: 'hidden', 
+              background: 'transparent',
+              borderRadius: '10px'
+            }}
             sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-storage-access-by-user-activation allow-top-navigation-by-user-activation"
             src={item.id}
           />
@@ -177,9 +186,9 @@ const MediaEmbed = ({ item }: { item: MediaItem }) => {
     default:
       return null
   }
-}
+})
 
-function Navbar({ isLoggedIn, onLoginToggle }: NavbarProps) {
+function Navbar({ isAuthenticated, onLoginToggle }: NavbarProps) {
   return (
     <nav className="sticky top-0 z-40 bg-gray-900/95 backdrop-blur-sm py-6 px-8 flex items-center justify-between border-b border-gray-800">
       <div className="flex items-center">
@@ -202,7 +211,7 @@ function Navbar({ isLoggedIn, onLoginToggle }: NavbarProps) {
           className="text-white border-white hover:bg-gray-800"
           onClick={onLoginToggle}
         >
-          {isLoggedIn ? "Disconnect Wallet" : "Connect Wallet"}
+          {isAuthenticated ? "Disconnect Wallet" : "Connect Wallet"}
         </Button>
       </div>
     </nav>
@@ -240,17 +249,14 @@ const extractMediaId = (url: string, type: MediaItem['type']): string => {
         const spPlaylistMatch = url.match(spPlaylistRegex)
         return spPlaylistMatch ? spPlaylistMatch[1] : url
 
+      case 'apple-music-album':
       case 'apple-music-playlist':
         try {
-          // Clean up the URL first
           const cleanUrl = url.replace(/^@/, '').trim()
-          
-          // Extract the important parts
-          const match = cleanUrl.match(/music\.apple\.com\/([^\/]+)\/playlist\/([^\/]+)\/([^\/\?]+)/)
+          const match = cleanUrl.match(/music\.apple\.com\/([^\/]+)\/(album|playlist)\/([^\/]+)\/([^\/\?]+)/)
           if (match) {
-            const [_, country, playlistName, playlistId] = match
-            // Construct the embed URL
-            return `https://embed.music.apple.com/${country}/playlist/${encodeURIComponent(playlistName)}/${playlistId}`
+            const [_, country, mediaType, name, id] = match
+            return `https://embed.music.apple.com/${country}/${mediaType}/${id}`
           }
           return url
         } catch (error) {
@@ -286,15 +292,76 @@ const detectMediaType = (url: string): MediaItem['type'] => {
     return url.includes('/playlist/') ? 'spotify-playlist' : 'spotify'
   }
   if (url.includes('music.apple.com')) {
-    return 'apple-music-playlist'
+    return url.includes('/album/') ? 'apple-music-album' : 'apple-music-playlist'
   }
   return 'youtube' // default
 }
 
 const defaultStickerImage = "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/daisy-blue-1sqZRfemKwLyREL0Eo89EfmQUT5wst.png"
 
-export default function Component() {
-  // Move these functions to the top of the component
+// Add these helper functions
+const fetchMediaTitle = async (url: string, type: MediaItem['type']): Promise<string> => {
+  try {
+    switch (type) {
+      case 'youtube':
+        // Extract video ID and fetch title from YouTube oEmbed
+        const videoId = extractMediaId(url, 'youtube')
+        const response = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`)
+        const data = await response.json()
+        return data.title
+
+      case 'spotify':
+      case 'spotify-playlist':
+        // Extract Spotify ID and use Spotify API (requires auth token)
+        const spotifyId = extractMediaId(url, type)
+        const mediaType = type === 'spotify' ? 'track' : 'playlist'
+        return `${mediaType.charAt(0).toUpperCase() + mediaType.slice(1)} - ${spotifyId}`
+
+      case 'apple-music-album':
+      case 'apple-music-playlist':
+        // Extract from URL
+        const match = url.match(/\/(album|playlist)\/([^\/]+)/)
+        return match ? decodeURIComponent(match[2]).replace(/-/g, ' ') : 'Apple Music'
+
+      case 'soundcloud':
+      case 'soundcloud-playlist':
+        // Extract from URL
+        const scMatch = url.match(/soundcloud\.com\/([^\/]+)(?:\/sets)?\/([^\/]+)/)
+        return scMatch ? `${scMatch[1]} - ${decodeURIComponent(scMatch[2])}` : 'SoundCloud'
+
+      default:
+        return 'Media'
+    }
+  } catch (error) {
+    console.error('Error fetching media title:', error)
+    return 'Media'
+  }
+}
+
+const getMediaDisplayName = (url: string, type: MediaItem['type']): string => {
+  switch (type) {
+    case 'youtube':
+      return 'YouTube Video'
+    case 'spotify':
+      return 'Spotify Track'
+    case 'spotify-playlist':
+      return 'Spotify Playlist'
+    case 'apple-music-album':
+      return 'Apple Music Album'
+    case 'apple-music-playlist':
+      return 'Apple Music Playlist'
+    case 'soundcloud':
+      return 'SoundCloud Track'
+    case 'soundcloud-playlist':
+      return 'SoundCloud Playlist'
+    default:
+      return 'Media'
+  }
+}
+
+export default function Component(): JSX.Element {
+  const { isAuthenticated, userAddress, connectWallet, disconnectWallet } = useAuth()
+
   const saveToLocalStorage = (data: {
     profile: Profile;
     projects: Project[];
@@ -302,7 +369,9 @@ export default function Component() {
     sticker: Sticker;
   }) => {
     try {
-      localStorage.setItem('userProfile', JSON.stringify(data))
+      // Use wallet address in the storage key
+      const storageKey = `userProfile_${userAddress}`
+      localStorage.setItem(storageKey, JSON.stringify(data))
     } catch (error) {
       console.error('Failed to save to localStorage:', error)
     }
@@ -310,7 +379,9 @@ export default function Component() {
 
   const loadFromLocalStorage = () => {
     try {
-      const saved = localStorage.getItem('userProfile')
+      // Load data specific to this wallet address
+      const storageKey = `userProfile_${userAddress}`
+      const saved = localStorage.getItem(storageKey)
       if (saved) {
         const data = JSON.parse(saved)
         return {
@@ -328,7 +399,6 @@ export default function Component() {
   }
 
   // Now we can use loadFromLocalStorage in our state initialization
-  const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const [formErrors, setFormErrors] = useState<FormErrors>({
     name: '',
@@ -377,6 +447,12 @@ export default function Component() {
       setSticker(saved.sticker)
     }
     setIsLoading(false)
+
+    // Cleanup function
+    return () => {
+      // Cancel any pending operations
+      debouncedSave.cancel()
+    }
   }, [])
 
   const [projects, setProjects] = useState<Project[]>([
@@ -406,17 +482,14 @@ export default function Component() {
   const [mediaItems, setMediaItems] = useState<MediaItem[]>([
     { 
       id: 'BFJu2NrIfx0', 
-      title: 'Primavera Sound',
       type: 'youtube'
     },
     { 
       id: 'A3QlF7Myeco', 
-      title: 'Mighty Morfin Jungle Set Live Nairobi',
       type: 'youtube'
     },
     { 
       id: 'rvGABUgyCOA', 
-      title: 'Salut Boiler Room London',
       type: 'youtube'
     }
   ])
@@ -424,14 +497,39 @@ export default function Component() {
   // Add these before the other handlers
   const handleLoginToggle = () => {
     setIsTransitioning(true)
-    setTimeout(() => {
-      setIsLoggedIn(prev => !prev)
-      setIsEditing(false)
-      setShowCropDialog(false)
-      setTempImage('')
-      setImageError(null)
-      setImageLoading(false)
-      setIsTransitioning(false)
+    setTimeout(async () => {
+      try {
+        if (isAuthenticated) {
+          await disconnectWallet()
+          // Reset all state to defaults
+          setProfile({
+            name: "Your Name",
+            title: "Your Role / Title",
+            bio: "Tell your story here...",
+            image: "/images/placeholder.png",
+            socialLinks: [
+              { platform: "youtube", url: "" },
+              { platform: "spotify", url: "" },
+              { platform: "soundcloud", url: "" },
+              { platform: "instagram", url: "" }
+            ]
+          })
+          setProjects([])
+          setMediaItems([])
+          setSticker({ enabled: true, image: defaultStickerImage })
+          setIsEditing(false)
+          setShowCropDialog(false)
+          setTempImage('')
+          setImageError(null)
+        } else {
+          await connectWallet()
+        }
+      } catch (error) {
+        console.error('Error handling wallet connection:', error)
+      } finally {
+        setImageLoading(false)
+        setIsTransitioning(false)
+      }
     }, 150)
   }
 
@@ -445,81 +543,87 @@ export default function Component() {
 
   // Add the image handling function
   const handleImageChange = async (file: File | null) => {
-    if (!file) return
+    try {
+      if (!file) return
 
-    // Reset any previous errors
-    setImageError(null)
-    setImageLoading(true)
+      // Reset any previous errors
+      setImageError(null)
+      setImageLoading(true)
 
-    // Check file type
-    const isGif = file.type === 'image/gif'
-    const isValidImage = file.type.startsWith('image/')
-    
-    if (!isValidImage) {
-      setImageError("Please upload an image file")
-      setImageLoading(false)
-      return
-    }
+      // Check file type
+      const isGif = file.type === 'image/gif'
+      const isValidImage = file.type.startsWith('image/')
+      
+      if (!isValidImage) {
+        setImageError("Please upload an image file")
+        setImageLoading(false)
+        return
+      }
 
-    // For GIFs, handle size check and optimization
-    if (isGif) {
-      try {
-        // Check file size
-        if (file.size > 5 * 1024 * 1024) {
-          setImageError("GIF must be less than 5MB")
+      // For GIFs, handle size check and optimization
+      if (isGif) {
+        try {
+          // Check file size
+          if (file.size > 5 * 1024 * 1024) {
+            setImageError("GIF must be less than 5MB")
+            setImageLoading(false)
+            return
+          }
+
+          const reader = new FileReader()
+          reader.onloadend = () => {
+            setProfile(prev => ({ ...prev, image: reader.result as string }))
+            setImageLoading(false)
+          }
+          reader.readAsDataURL(file)
+        } catch (error) {
+          setImageError("Failed to process GIF. Please try again.")
           setImageLoading(false)
-          return
         }
+        return
+      }
 
+      // For non-GIF images, show crop dialog
+      try {
         const reader = new FileReader()
         reader.onloadend = () => {
-          setProfile(prev => ({ ...prev, image: reader.result as string }))
+          // Create a temporary image to get dimensions
+          const img = document.createElement('img')
+          img.onload = () => {
+            const isSquare = img.width === img.height
+            
+            // Set initial crop based on image dimensions
+            setCropState(prev => ({
+              ...prev,
+              crop: {
+                unit: '%',
+                width: isSquare ? 100 : 90,
+                height: isSquare ? 100 : 90,
+                x: isSquare ? 0 : 5,
+                y: isSquare ? 0 : 5,
+                aspect: 1
+              },
+              imageRef: null
+            }))
+            
+            setTempImage(reader.result as string)
+            setShowCropDialog(true)
+            setImageLoading(false)
+          }
+          img.src = reader.result as string
+        }
+        reader.onerror = () => {
+          setImageError("Failed to read file")
           setImageLoading(false)
         }
         reader.readAsDataURL(file)
       } catch (error) {
-        setImageError("Failed to process GIF. Please try again.")
+        setImageError("Failed to load image")
         setImageLoading(false)
       }
-      return
-    }
-
-    // For non-GIF images, show crop dialog
-    try {
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        // Create a temporary image to get dimensions
-        const img = document.createElement('img')
-        img.onload = () => {
-          const isSquare = img.width === img.height
-          
-          // Set initial crop based on image dimensions
-          setCropState(prev => ({
-            ...prev,
-            crop: {
-              unit: '%',
-              width: isSquare ? 100 : 90,
-              height: isSquare ? 100 : 90,
-              x: isSquare ? 0 : 5,
-              y: isSquare ? 0 : 5,
-              aspect: 1
-            },
-            imageRef: null
-          }))
-          
-          setTempImage(reader.result as string)
-          setShowCropDialog(true)
-          setImageLoading(false)
-        }
-        img.src = reader.result as string
-      }
-      reader.onerror = () => {
-        setImageError("Failed to read file")
-        setImageLoading(false)
-      }
-      reader.readAsDataURL(file)
     } catch (error) {
-      setImageError("Failed to load image")
+      console.error('Error handling image:', error)
+      setImageError('Failed to process image. Please try again.')
       setImageLoading(false)
     }
   }
@@ -530,7 +634,12 @@ export default function Component() {
     const { name, value } = e.target
     const newProfile = { ...profile, [name]: value }
     setProfile(newProfile)
-    debouncedSave(newProfile)
+    debouncedSave({
+      profile: newProfile,
+      projects,
+      mediaItems,
+      sticker
+    })
   }
 
   const handleSocialLinkChange = (index: number, field: string, value: string) => {
@@ -563,7 +672,7 @@ export default function Component() {
     if (file) {
       handleImageChange(file)
     }
-  }, [])
+  }, [handleImageChange])
 
   const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault()
@@ -595,29 +704,19 @@ export default function Component() {
     setProjects(prev => prev.filter((_, i) => i !== index))
   }
 
-  const handleMediaChange = (index: number, field: string, value: string) => {
+  const handleMediaChange = async (index: number, field: string, value: string) => {
     if (field === 'id' && value) {
-      // Auto-detect media type from URL
       const detectedType = detectMediaType(value)
+      const displayName = getMediaDisplayName(value, detectedType)
       
       setMediaItems(prev => prev.map((item, i) => {
         if (i === index) {
-          if (detectedType === 'apple-music-playlist') {
-            // Handle Apple Music URLs
-            const cleanUrl = value.replace(/^@/, '').trim()
-            return {
-              ...item,
-              type: detectedType,
-              id: cleanUrl,
-              rawUrl: cleanUrl.replace('music.apple.com', 'embed.music.apple.com')
-            }
-          }
-          // Handle other media types
           const extractedId = extractMediaId(value, detectedType)
           return {
             ...item,
             type: detectedType,
-            id: extractedId
+            id: extractedId,
+            rawUrl: value
           }
         }
         return item
@@ -630,7 +729,11 @@ export default function Component() {
   }
 
   const addMedia = () => {
-    setMediaItems(prev => [...prev, { id: '', title: '', type: 'youtube' }])
+    setMediaItems(prev => [...prev, { 
+      id: '', 
+      type: 'youtube',
+      rawUrl: ''
+    }])
   }
 
   const removeMedia = (index: number) => {
@@ -651,7 +754,9 @@ export default function Component() {
     crop: {
       unit: '%',
       width: 90,
-      aspect: 1
+      height: 90,
+      x: 5,
+      y: 5
     },
     aspect: 1,
     imageRef: null,
@@ -659,7 +764,7 @@ export default function Component() {
   })
 
   // Update the handleCropComplete function
-  const handleCropComplete = async (crop: Crop) => {
+  const handleCropComplete = async (crop: CropType) => {
     if (!cropState.imageRef || !crop.width || !crop.height) {
       console.error('Missing required crop data')
       return
@@ -708,47 +813,55 @@ export default function Component() {
     }
   }
 
-  const handleSave = () => {
-    // Reset previous errors
-    setFormErrors({
-      name: '',
-      title: '',
-      bio: '',
-      socialLinks: []
-    })
+  const handleSave = async () => {
+    try {
+      setIsLoading(true)
+      // Reset previous errors
+      setFormErrors({
+        name: '',
+        title: '',
+        bio: '',
+        socialLinks: []
+      })
 
-    let hasErrors = false
+      let hasErrors = false
 
-    // Validate name
-    if (profile.name.trim() === '') {
-      setFormErrors(prev => ({ ...prev, name: 'Name is required' }))
-      hasErrors = true
+      // Validate name
+      if (profile.name.trim() === '') {
+        setFormErrors(prev => ({ ...prev, name: 'Name is required' }))
+        hasErrors = true
+      }
+
+      // Validate title
+      if (profile.title.trim() === '') {
+        setFormErrors(prev => ({ ...prev, title: 'Title is required' }))
+        hasErrors = true
+      }
+
+      // Validate bio
+      if (profile.bio.trim() === '') {
+        setFormErrors(prev => ({ ...prev, bio: 'Bio is required' }))
+        hasErrors = true
+      }
+
+      if (hasErrors) {
+        return
+      }
+
+      // Save all data
+      saveToLocalStorage({
+        profile,
+        projects,
+        mediaItems,
+        sticker
+      })
+      setIsEditing(false)
+    } catch (error) {
+      console.error('Error saving profile:', error)
+      // Add error handling UI
+    } finally {
+      setIsLoading(false)
     }
-
-    // Validate title
-    if (profile.title.trim() === '') {
-      setFormErrors(prev => ({ ...prev, title: 'Title is required' }))
-      hasErrors = true
-    }
-
-    // Validate bio
-    if (profile.bio.trim() === '') {
-      setFormErrors(prev => ({ ...prev, bio: 'Bio is required' }))
-      hasErrors = true
-    }
-
-    if (hasErrors) {
-      return
-    }
-
-    // Save all data
-    saveToLocalStorage({
-      profile,
-      projects,
-      mediaItems,
-      sticker
-    })
-    setIsEditing(false)
   }
 
   const ImageDisplay = () => (
@@ -785,7 +898,7 @@ export default function Component() {
   const [projectsLoading, setProjectsLoading] = useState(true)
   const [videosLoading, setVideosLoading] = useState(true)
   const [visibleProjects, setVisibleProjects] = useState(3) // Start with 3 projects
-  const [visibleVideos, setVisibleVideos] = useState(3)    // Show all 3 videos initially
+  const [visibleVideos, setVisibleVideos] = useState(6)    // Show up to 6 videos
 
   // Add loading handlers
   useEffect(() => {
@@ -799,18 +912,13 @@ export default function Component() {
     setVisibleProjects(prev => Math.min(prev + 3, projects.length))
   }
 
-  const loadMoreVideos = () => {
-    // Calculate how many items we need to show to complete the next row
-    const itemsPerRow = 3; // Number of items in a full row
-    const currentItems = visibleVideos;
-    const totalItems = mediaItems.length;
-    
-    // Calculate the next multiple of 3 that would include all remaining items up to the next complete row
-    const nextRowCount = Math.ceil((currentItems + 1) / itemsPerRow) * itemsPerRow;
-    
-    // Set new visible count, but don't exceed total items
-    setVisibleVideos(Math.min(nextRowCount, totalItems));
-  }
+  // Add auth loading state
+  const [authLoading, setAuthLoading] = useState(true)
+
+  useEffect(() => {
+    // Update loading state when auth status changes
+    setAuthLoading(false)
+  }, [isAuthenticated])
 
   // Add back the return statement with all the JSX
   return (
@@ -839,104 +947,119 @@ export default function Component() {
               }
             `
           }} />
-          <Navbar isLoggedIn={isLoggedIn} onLoginToggle={handleLoginToggle} />
+          <Navbar isAuthenticated={isAuthenticated} onLoginToggle={handleLoginToggle} />
           <div className="p-4 sm:p-8 md:p-12 lg:p-16 min-h-screen flex flex-col">
             <div className={`max-w-6xl mx-auto w-full flex-grow transition-opacity duration-150 ${
               isTransitioning ? 'opacity-0' : 'opacity-100'
             }`}>
-              {isLoggedIn && isEditing ? (
+              {isAuthenticated && isEditing ? (
                 // Edit Mode
                 <div className="bg-gray-800 p-8 rounded-lg shadow-lg">
-                  <h2 className="text-2xl font-bold mb-6">Edit Your Profile</h2>
-                  <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} className="space-y-6">
-                    <div>
-                      <Label htmlFor="profileImage">Profile Image</Label>
-                      <div 
-                        onDrop={handleDrop}
-                        onDragOver={handleDragOver}
-                        className="mt-2 border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:border-primary transition-colors"
-                      >
-                        <div className="flex flex-col items-center space-y-2">
-                          <ImageDisplay />
-                          <p className="text-sm text-gray-300">
-                            Drag & drop an image here, or click to select one
-                          </p>
-                          <Label htmlFor="fileInput" className="cursor-pointer">
-                            <Button 
-                              type="button" 
-                              variant="outline" 
-                              size="sm" 
-                              className="mt-2" 
-                              aria-label="Upload profile image"
-                              onClick={() => {
-                                // Programmatically click the hidden file input
-                                document.getElementById('fileInput')?.click()
-                              }}
-                            >
-                              <Upload className="w-4 h-4 mr-2" aria-hidden="true" />
-                              Upload Image
-                            </Button>
-                          </Label>
-                          <Input 
-                            id="fileInput" 
-                            type="file" 
-                            accept="image/*" 
-                            onChange={(e) => {
-                              const files = e.target.files
-                              if (files && files.length > 0) {
-                                handleImageChange(files[0])
-                                // Reset the input value so the same file can be selected again
-                                e.target.value = ''
-                              }
-                            }} 
-                            className="hidden"
-                          />
+                  <h2 className="text-2xl font-bold mb-8">Edit Your Profile</h2>
+                  <form 
+                    onSubmit={(e) => { 
+                      e.preventDefault()
+                      handleSave()
+                    }} 
+                    className="space-y-16"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                      }
+                    }}
+                  >
+                    <div className="space-y-8">
+                      <div>
+                        <Label htmlFor="profileImage">Profile Image</Label>
+                        <div 
+                          role="button"
+                          aria-label="Upload profile image"
+                          onDrop={handleDrop}
+                          onDragOver={handleDragOver}
+                          className="mt-2 border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:border-primary transition-colors"
+                        >
+                          <div className="flex flex-col items-center space-y-2">
+                            <ImageDisplay />
+                            <p className="text-sm text-gray-300">
+                              Drag & drop an image here, or click to select one
+                            </p>
+                            <Label htmlFor="fileInput" className="cursor-pointer">
+                              <Button 
+                                type="button" 
+                                variant="outline" 
+                                size="sm" 
+                                className="mt-2" 
+                                aria-label="Upload profile image"
+                                onClick={() => {
+                                  // Programmatically click the hidden file input
+                                  document.getElementById('fileInput')?.click()
+                                }}
+                              >
+                                <Upload className="w-4 h-4 mr-2" aria-hidden="true" />
+                                Upload Image
+                              </Button>
+                            </Label>
+                            <Input 
+                              id="fileInput" 
+                              type="file" 
+                              accept="image/*" 
+                              onChange={(e) => {
+                                const files = e.target.files
+                                if (files && files.length > 0) {
+                                  handleImageChange(files[0])
+                                  // Reset the input value so the same file can be selected again
+                                  e.target.value = ''
+                                }
+                              }} 
+                              className="hidden"
+                            />
+                          </div>
                         </div>
+                        {imageError && (
+                          <p className="mt-2 text-sm text-red-500">{imageError}</p>
+                        )}
                       </div>
-                      {imageError && (
-                        <p className="mt-2 text-sm text-red-500">{imageError}</p>
-                      )}
+
+                      <div>
+                        <Label htmlFor="name">Name</Label>
+                        <Input
+                          id="name"
+                          name="name"
+                          value={profile.name}
+                          onChange={handleProfileChange}
+                          className={`mt-1 ${formErrors.name ? 'border-red-500' : ''}`}
+                        />
+                        {formErrors.name && <p className="text-red-500 text-sm mt-1">{formErrors.name}</p>}
+                      </div>
+
+                      <div>
+                        <Label htmlFor="title">Title</Label>
+                        <Input
+                          id="title"
+                          name="title"
+                          value={profile.title}
+                          onChange={handleProfileChange}
+                          className={`mt-1 ${formErrors.title ? 'border-red-500' : ''}`}
+                        />
+                        {formErrors.title && <p className="text-red-500 text-sm mt-1">{formErrors.title}</p>}
+                      </div>
+
+                      <div>
+                        <Label htmlFor="bio">Bio</Label>
+                        <Textarea
+                          id="bio"
+                          name="bio"
+                          value={profile.bio}
+                          onChange={handleProfileChange}
+                          rows={4}
+                          className={`mt-1 ${formErrors.bio ? 'border-red-500' : ''}`}
+                        />
+                        {formErrors.bio && <p className="text-red-500 text-sm mt-1">{formErrors.bio}</p>}
+                      </div>
                     </div>
 
-                    <div>
-                      <Label htmlFor="name">Name</Label>
-                      <Input
-                        id="name"
-                        name="name"
-                        value={profile.name}
-                        onChange={handleProfileChange}
-                        className={`mt-1 ${formErrors.name ? 'border-red-500' : ''}`}
-                      />
-                      {formErrors.name && <p className="text-red-500 text-sm mt-1">{formErrors.name}</p>}
-                    </div>
-
-                    <div>
-                      <Label htmlFor="title">Title</Label>
-                      <Input
-                        id="title"
-                        name="title"
-                        value={profile.title}
-                        onChange={handleProfileChange}
-                        className={`mt-1 ${formErrors.title ? 'border-red-500' : ''}`}
-                      />
-                      {formErrors.title && <p className="text-red-500 text-sm mt-1">{formErrors.title}</p>}
-                    </div>
-
-                    <div>
-                      <Label htmlFor="bio">Bio</Label>
-                      <Textarea
-                        id="bio"
-                        name="bio"
-                        value={profile.bio}
-                        onChange={handleProfileChange}
-                        rows={4}
-                        className={`mt-1 ${formErrors.bio ? 'border-red-500' : ''}`}
-                      />
-                      {formErrors.bio && <p className="text-red-500 text-sm mt-1">{formErrors.bio}</p>}
-                    </div>
-
-                    <div>
-                      <h3 className="text-lg font-semibold mb-2">Social Links</h3>
+                    <div className="space-y-8 pt-8 border-t border-gray-700">
+                      <h3 className="text-xl font-semibold">Social Links</h3>
                       {profile.socialLinks.map((link, index) => (
                         <div key={index} className="flex items-center space-x-2 mb-2">
                           <Select
@@ -972,8 +1095,8 @@ export default function Component() {
                       </Button>
                     </div>
 
-                    <div>
-                      <h3 className="text-lg font-semibold mb-2">Projects and People</h3>
+                    <div className="space-y-8 pt-8 border-t border-gray-700">
+                      <h3 className="text-xl font-semibold">Projects and People</h3>
                       <Accordion type="single" collapsible className="w-full">
                         {projects.map((project, index) => (
                           <AccordionItem key={project.id} value={`item-${index}`}>
@@ -1045,13 +1168,13 @@ export default function Component() {
                       </Button>
                     </div>
 
-                    <div>
-                      <h3 className="text-lg font-semibold mb-2">Media</h3>
+                    <div className="space-y-8 pt-8 border-t border-gray-700">
+                      <h3 className="text-xl font-semibold">Media</h3>
                       <Accordion type="single" collapsible className="w-full">
                         {mediaItems.map((media, index) => (
                           <AccordionItem key={index} value={`media-${index}`}>
                             <AccordionTrigger className="text-left">
-                              {media.title || `Media ${index + 1}`}
+                              {media.id ? getMediaDisplayName(media.rawUrl || '', media.type) : `New Media`}
                             </AccordionTrigger>
                             <AccordionContent>
                               <Card className="mb-4 p-4 bg-gray-700">
@@ -1076,6 +1199,11 @@ export default function Component() {
                                             } : item
                                           ))
                                         }}
+                                        onKeyDown={(e) => {
+                                          if (e.key === 'Enter') {
+                                            e.preventDefault()
+                                          }
+                                        }}
                                         placeholder="Paste URL from YouTube, SoundCloud, Spotify, or Apple Music"
                                       />
                                       <p className="text-xs text-gray-400">
@@ -1098,13 +1226,17 @@ export default function Component() {
                           </AccordionItem>
                         ))}
                       </Accordion>
-                      <Button type="button" onClick={() => setMediaItems(prev => [...prev, { id: '', title: '', type: 'youtube' }])} className="mt-2">
+                      <Button type="button" onClick={() => setMediaItems(prev => [...prev, { 
+                        id: '', 
+                        type: 'youtube', 
+                        rawUrl: '' 
+                      }])} className="mt-2">
                         <Plus className="w-4 h-4 mr-2" /> Add Media
                       </Button>
                     </div>
 
-                    <div>
-                      <h3 className="text-lg font-semibold mb-2">Profile Sticker</h3>
+                    <div className="space-y-8 pt-8 border-t border-gray-700">
+                      <h3 className="text-xl font-semibold">Profile Sticker</h3>
                       <div className="space-y-4">
                         <div className="flex items-center space-x-2">
                           <Checkbox
@@ -1164,23 +1296,11 @@ export default function Component() {
                         )}
                       </div>
                     </div>
-                    <div className="flex justify-end space-x-4 mt-8">
-                      <Button 
-                        type="button" 
-                        variant="outline" 
-                        onClick={() => {
-                          setIsEditing(false)
-                          setShowCropDialog(false)
-                          setTempImage('')
-                          setImageError(null)
-                          setImageLoading(false)
-                        }}
-                      >
+                    <div className="flex justify-end space-x-4 pt-8 border-t border-gray-700">
+                      <Button type="button" variant="outline" onClick={() => setIsEditing(false)}>
                         Cancel
                       </Button>
-                      <Button type="submit">
-                        Save Changes
-                      </Button>
+                      <Button type="submit">Save Changes</Button>
                     </div>
                   </form>
                   {showCropDialog && (
@@ -1190,8 +1310,8 @@ export default function Component() {
                         <div className="relative flex-1 min-h-0 overflow-auto">
                           <ReactCrop
                             crop={cropState.crop}
-                            onChange={(c: Crop) => setCropState(prev => ({ ...prev, crop: c }))}
-                            onComplete={(c: Crop) => setCropState(prev => ({ ...prev, completedCrop: c }))}
+                            onChange={(c: CropType) => setCropState(prev => ({ ...prev, crop: c }))}
+                            onComplete={(c: CropType) => setCropState(prev => ({ ...prev, completedCrop: c }))}
                             aspect={cropState.aspect}
                           >
                             <img
@@ -1246,7 +1366,7 @@ export default function Component() {
                       <div className="space-y-6 lg:space-y-8 max-w-sm">
                         <div>
                           <h1 className="text-3xl sm:text-4xl font-bold text-cyan-300">{profile.name}</h1>
-                          <p className="text-lg sm:text-xl text-gray-200">{profile.title}</p>
+                          <h2 className="text-lg sm:text-xl text-gray-200">{profile.title}</h2>
                         </div>
                         
                         <div>
@@ -1292,7 +1412,7 @@ export default function Component() {
                                 asChild={!!link.url}
                               >
                                 {link.url ? (
-                                  <a href={link.url} target="_blank" rel="noopener noreferrer">
+                                  <a href={link.url} target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer">
                                     <Icon className="h-5 w-5 sm:h-6 sm:w-6" />
                                     <span className="sr-only">{link.platform}</span>
                                   </a>
@@ -1310,7 +1430,7 @@ export default function Component() {
                           })}
                         </div>
 
-                        {isLoggedIn && (
+                        {isAuthenticated && (
                           <Button onClick={() => setIsEditing(true)} variant="outline" className="mt-4">
                             <Edit2 className="mr-2 h-4 w-4" /> Edit Profile
                           </Button>
@@ -1350,6 +1470,7 @@ export default function Component() {
                                 className="flex h-full group"
                                 target="_blank"
                                 rel="noopener noreferrer"
+                                referrerPolicy="no-referrer"
                               >
                                 <div className="flex h-full">
                                   <div className="relative w-24 h-full p-1">
@@ -1398,26 +1519,14 @@ export default function Component() {
                           </Card>
                         ))
                       ) : (
-                        <>
-                          {mediaItems.slice(0, visibleVideos).map((video, index) => (
-                            <Card key={index} className="w-full max-w-[560px] mx-auto">
-                              <CardContent className="p-4">
-                                <MediaEmbed item={video} />
-                                <h3 className="mt-2 text-lg font-semibold text-white">{video.title}</h3>
-                              </CardContent>
-                            </Card>
-                          ))}
-                          {console.log('Total items:', mediaItems.length, 'Visible items:', visibleVideos)}
-                          {mediaItems.length > visibleVideos && (
-                            <Button 
-                              onClick={loadMoreVideos}
-                              variant="ghost" 
-                              className="col-span-full mx-auto mt-4"
-                            >
-                              Load More Media ({mediaItems.length - visibleVideos} more)
-                            </Button>
-                          )}
-                        </>
+                        // Only show first 6 items
+                        mediaItems.slice(0, 6).map((video, index) => (
+                          <Card key={index} className="w-full max-w-[560px] mx-auto">
+                            <CardContent className="p-4">
+                              <MediaEmbed item={video} />
+                            </CardContent>
+                          </Card>
+                        ))
                       )}
                     </div>
                   </div>
