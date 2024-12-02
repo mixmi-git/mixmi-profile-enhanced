@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Youtube, Music2, CloudRain, Twitter, Edit2, Plus, Trash2, Upload, User, Linkedin, Instagram } from "lucide-react"
+import { Youtube, Music2, CloudRain, Twitter, Edit2, Plus, Trash2, Upload, User, Linkedin, Instagram, ShoppingBag, Store, Gift } from "lucide-react"
 import {
   Accordion,
   AccordionContent,
@@ -193,6 +193,49 @@ const MediaEmbed = memo(({ item }: { item: MediaItem }) => {
   }
 })
 
+// Update the ShopItem interface
+export interface ShopItem {
+  id: string;
+  title: string;
+  storeUrl: string;
+  image: string;
+  platform: 'shopify' | 'etsy' | 'gumroad' | 'bigcartel' | 'other';
+}
+
+// Simplified shop card
+const ShopItemCard = ({ item, isEditing = false }: { item: ShopItem, isEditing?: boolean }) => {
+  return (
+    <Card className={`w-full overflow-hidden group ${isEditing ? 'max-w-sm' : ''}`}>
+      <CardContent className="p-0">
+        <a 
+          href={item.storeUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block"
+        >
+          <div className={`relative ${isEditing ? 'aspect-[3/2]' : 'aspect-[4/3]'} w-full bg-gray-800`}>
+            <Image
+              src={item.image || defaultProductImage}
+              alt={item.title || 'Product image'}
+              fill
+              className="object-cover transition-transform duration-300 group-hover:scale-105"
+              unoptimized
+            />
+          </div>
+          <div className="p-4">
+            <div className="font-semibold mb-2 text-lg">
+              {item.title || 'Untitled Product'}
+            </div>
+            <div className="text-sm text-gray-400">
+              Visit Store
+            </div>
+          </div>
+        </a>
+      </CardContent>
+    </Card>
+  )
+}
+
 function Navbar({ isAuthenticated, onLoginToggle }: NavbarProps) {
   return (
     <nav className="sticky top-0 z-40 bg-gray-900/95 backdrop-blur-sm py-6 px-8 flex items-center justify-between border-b border-gray-800">
@@ -364,6 +407,65 @@ const getMediaDisplayName = (url: string, type: MediaItem['type']): string => {
   }
 }
 
+export interface ShopItem {
+  id: string;
+  title: string;
+  storeUrl: string;
+  image: string;
+  platform: 'shopify' | 'etsy' | 'gumroad' | 'bigcartel' | 'other';
+}
+
+const detectShopType = (url: string): ShopItem['type'] => {
+  if (url.includes('shopify.com')) return 'shopify-product'
+  if (url.includes('etsy.com')) return 'etsy-listing'
+  if (url.includes('gumroad.com')) return 'gumroad-product'
+  if (url.includes('bigcartel.com')) return 'bigcartel-product'
+  return 'shopify-product'
+}
+
+const generateShopEmbed = (url: string, type: ShopItem['type']): string => {
+  switch (type) {
+    case 'shopify-product':
+      // Convert product URL to embed URL
+      return url.replace('/products/', '/products/embed/')
+    case 'etsy-listing':
+      // Extract listing ID and create embed URL
+      const etsyMatch = url.match(/listing\/(\d+)/)
+      return etsyMatch ? `https://www.etsy.com/listing/${etsyMatch[1]}/embed` : url
+    case 'gumroad-product':
+      // Convert to embed URL
+      return url.replace('/l/', '/l/embed/')
+    case 'bigcartel-product':
+      // Convert to embed URL
+      return url + '/embed'
+    default:
+      return url
+  }
+}
+
+// Update the shop icon components
+const ShopifyIcon = ({ className }: { className?: string }) => (
+  <ShoppingBag className={className} />
+)
+
+const EtsyIcon = ({ className }: { className?: string }) => (
+  <Store className={className} />
+)
+
+const GumroadIcon = ({ className }: { className?: string }) => (
+  <Gift className={className} />
+)
+
+// Add this with other constants
+const defaultProductImage = "/images/product-placeholder.png"
+
+// Add history state
+interface HistoryState {
+  shopItems: ShopItem[];
+  currentIndex: number;
+  history: ShopItem[][];
+}
+
 export default function Component(): JSX.Element {
   const { isAuthenticated, userAddress, connectWallet, disconnectWallet } = useAuth()
 
@@ -372,9 +474,9 @@ export default function Component(): JSX.Element {
     projects: Project[];
     mediaItems: MediaItem[];
     sticker: Sticker;
+    shopItems: ShopItem[];
   }) => {
     try {
-      // Use wallet address in the storage key
       const storageKey = `userProfile_${userAddress}`
       localStorage.setItem(storageKey, JSON.stringify(data))
     } catch (error) {
@@ -384,7 +486,6 @@ export default function Component(): JSX.Element {
 
   const loadFromLocalStorage = () => {
     try {
-      // Load data specific to this wallet address
       const storageKey = `userProfile_${userAddress}`
       const saved = localStorage.getItem(storageKey)
       if (saved) {
@@ -409,10 +510,10 @@ export default function Component(): JSX.Element {
           },
           projects: data.projects || [],
           mediaItems: data.mediaItems || [],
-          sticker: data.sticker || { enabled: true, image: defaultStickerImage }
+          sticker: data.sticker || { enabled: true, image: defaultStickerImage },
+          shopItems: Array.isArray(data.shopItems) ? data.shopItems : []
         }
       }
-      // Return default values if no saved data
       return {
         profile: {
           name: "Your Name",
@@ -433,7 +534,8 @@ export default function Component(): JSX.Element {
         },
         projects: [],
         mediaItems: [],
-        sticker: { enabled: true, image: defaultStickerImage }
+        sticker: { enabled: true, image: defaultStickerImage },
+        shopItems: []
       }
     } catch (error) {
       console.error('Failed to load from localStorage:', error)
@@ -441,7 +543,6 @@ export default function Component(): JSX.Element {
     }
   }
 
-  // Now we can use loadFromLocalStorage in our state initialization
   const [isEditing, setIsEditing] = useState(false)
   const [formErrors, setFormErrors] = useState<FormErrors>({
     name: '',
@@ -450,23 +551,18 @@ export default function Component(): JSX.Element {
     socialLinks: []
   })
   
-  // Add back the sticker state
   const [sticker, setSticker] = useState<Sticker>({
     enabled: true,
     image: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/daisy-blue-1sqZRfemKwLyREL0Eo89EfmQUT5wst.png"
   })
 
-  // Add loading and error states
   const [imageLoading, setImageLoading] = useState(true)
   const [imageError, setImageError] = useState<string | null>(null)
 
-  // Add isTransitioning state
   const [isTransitioning, setIsTransitioning] = useState(false)
 
-  // Add a loading state
   const [isLoading, setIsLoading] = useState(true)
 
-  // Modify the profile state initialization
   const [profile, setProfile] = useState<Profile>({
     name: "Your Name",
     title: "Your Role / Title",
@@ -485,22 +581,13 @@ export default function Component(): JSX.Element {
     }
   })
 
-  // Add useEffect for localStorage
   useEffect(() => {
     const saved = loadFromLocalStorage()
     if (saved) {
-      setProfile(saved.profile)
-      setProjects(saved.projects)
-      setMediaItems(saved.mediaItems)
-      setSticker(saved.sticker)
+      console.log('Loading shop items:', saved.shopItems)
+      setShopItems(saved.shopItems)
     }
     setIsLoading(false)
-
-    // Cleanup function
-    return () => {
-      // Cancel any pending operations
-      debouncedSave.cancel()
-    }
   }, [])
 
   const [projects, setProjects] = useState<Project[]>([
@@ -542,14 +629,12 @@ export default function Component(): JSX.Element {
     }
   ])
 
-  // Add these before the other handlers
   const handleLoginToggle = () => {
     setIsTransitioning(true)
     setTimeout(async () => {
       try {
         if (isAuthenticated) {
           await disconnectWallet()
-          // Reset all state to defaults
           setProfile({
             name: "Your Name",
             title: "Your Role / Title",
@@ -586,24 +671,26 @@ export default function Component(): JSX.Element {
     }, 150)
   }
 
-  // Add the debounced save function
   const debouncedSave = useCallback(
-    debounce((data: { profile: Profile; projects: Project[]; mediaItems: MediaItem[]; sticker: Sticker }) => {
+    debounce((data: { 
+      profile: Profile; 
+      projects: Project[]; 
+      mediaItems: MediaItem[]; 
+      sticker: Sticker;
+      shopItems: ShopItem[]; 
+    }) => {
       saveToLocalStorage(data)
     }, 1000),
     []
   )
 
-  // Add the image handling function
   const handleImageChange = async (file: File | null) => {
     try {
       if (!file) return
 
-      // Reset any previous errors
       setImageError(null)
       setImageLoading(true)
 
-      // Check file type
       const isGif = file.type === 'image/gif'
       const isValidImage = file.type.startsWith('image/')
       
@@ -613,10 +700,8 @@ export default function Component(): JSX.Element {
         return
       }
 
-      // For GIFs, handle size check and optimization
       if (isGif) {
         try {
-          // Check file size
           if (file.size > 5 * 1024 * 1024) {
             setImageError("GIF must be less than 5MB")
             setImageLoading(false)
@@ -636,16 +721,13 @@ export default function Component(): JSX.Element {
         return
       }
 
-      // For non-GIF images, show crop dialog
       try {
         const reader = new FileReader()
         reader.onloadend = () => {
-          // Create a temporary image to get dimensions
           const img = document.createElement('img')
           img.onload = () => {
             const isSquare = img.width === img.height
             
-            // Set initial crop based on image dimensions
             setCropState(prev => ({
               ...prev,
               crop: {
@@ -681,8 +763,6 @@ export default function Component(): JSX.Element {
     }
   }
 
-  // After the existing state declarations, add these handlers:
-
   const handleProfileChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
     const newProfile = { ...profile, [name]: value }
@@ -691,7 +771,8 @@ export default function Component(): JSX.Element {
       profile: newProfile,
       projects,
       mediaItems,
-      sticker
+      sticker,
+      shopItems: []
     })
   }
 
@@ -800,7 +881,6 @@ export default function Component(): JSX.Element {
     }))
   }
 
-  // Add these state declarations after the other states
   const [showCropDialog, setShowCropDialog] = useState(false)
   const [tempImage, setTempImage] = useState<string>('')
   const [cropState, setCropState] = useState<CropState>({
@@ -816,7 +896,6 @@ export default function Component(): JSX.Element {
     completedCrop: null
   })
 
-  // Update the handleCropComplete function
   const handleCropComplete = async (crop: CropType) => {
     if (!cropState.imageRef || !crop.width || !crop.height) {
       console.error('Missing required crop data')
@@ -828,7 +907,6 @@ export default function Component(): JSX.Element {
       const scaleX = cropState.imageRef.naturalWidth / cropState.imageRef.width
       const scaleY = cropState.imageRef.naturalHeight / cropState.imageRef.height
       
-      // Set canvas dimensions to the cropped size
       canvas.width = crop.width
       canvas.height = crop.height
       
@@ -838,7 +916,6 @@ export default function Component(): JSX.Element {
         return
       }
 
-      // Draw the cropped image
       ctx.drawImage(
         cropState.imageRef,
         crop.x * scaleX,
@@ -851,11 +928,9 @@ export default function Component(): JSX.Element {
         crop.height
       )
 
-      // Convert to base64 and update profile
       const base64Image = canvas.toDataURL('image/jpeg', 0.9)
       setProfile(prev => ({ ...prev, image: base64Image }))
       
-      // Clean up
       setShowCropDialog(false)
       setTempImage('')
       setImageLoading(false)
@@ -868,52 +943,17 @@ export default function Component(): JSX.Element {
 
   const handleSave = async () => {
     try {
-      setIsLoading(true)
-      // Reset previous errors
-      setFormErrors({
-        name: '',
-        title: '',
-        bio: '',
-        socialLinks: []
-      })
-
-      let hasErrors = false
-
-      // Validate name
-      if (profile.name.trim() === '') {
-        setFormErrors(prev => ({ ...prev, name: 'Name is required' }))
-        hasErrors = true
-      }
-
-      // Validate title
-      if (profile.title.trim() === '') {
-        setFormErrors(prev => ({ ...prev, title: 'Title is required' }))
-        hasErrors = true
-      }
-
-      // Validate bio
-      if (profile.bio.trim() === '') {
-        setFormErrors(prev => ({ ...prev, bio: 'Bio is required' }))
-        hasErrors = true
-      }
-
-      if (hasErrors) {
-        return
-      }
-
-      // Save all data
+      console.log('Saving profile with shop items:', shopItems)
       saveToLocalStorage({
         profile,
         projects,
         mediaItems,
-        sticker
+        sticker,
+        shopItems
       })
       setIsEditing(false)
     } catch (error) {
       console.error('Error saving profile:', error)
-      // Add error handling UI
-    } finally {
-      setIsLoading(false)
     }
   }
 
@@ -947,33 +987,110 @@ export default function Component(): JSX.Element {
     </div>
   )
 
-  // Add these state declarations after the other states
   const [projectsLoading, setProjectsLoading] = useState(true)
   const [videosLoading, setVideosLoading] = useState(true)
-  const [visibleProjects, setVisibleProjects] = useState(3) // Start with 3 projects
-  const [visibleVideos, setVisibleVideos] = useState(6)    // Show up to 6 videos
+  const [visibleProjects, setVisibleProjects] = useState(3)
+  const [visibleVideos, setVisibleVideos] = useState(6)
 
-  // Add loading handlers
   useEffect(() => {
-    // Simulate loading delay
     setTimeout(() => setProjectsLoading(false), 800)
     setTimeout(() => setVideosLoading(false), 1200)
   }, [])
 
-  // Add load more handlers
   const loadMoreProjects = () => {
     setVisibleProjects(prev => Math.min(prev + 3, projects.length))
   }
 
-  // Add auth loading state
   const [authLoading, setAuthLoading] = useState(true)
 
   useEffect(() => {
-    // Update loading state when auth status changes
     setAuthLoading(false)
   }, [isAuthenticated])
 
-  // Add back the return statement with all the JSX
+  const [shopItems, setShopItems] = useState<ShopItem[]>([])
+
+  const handleShopItemChange = (index: number, field: string, value: string) => {
+    const updatedItems = shopItems.map((item, i) => 
+      i === index ? {
+        ...item,
+        [field]: value,
+        ...(field === 'storeUrl' ? {
+          platform: (value.includes('shopify.com') ? 'shopify' :
+                   value.includes('etsy.com') ? 'etsy' :
+                   value.includes('gumroad.com') ? 'gumroad' :
+                   value.includes('bigcartel.com') ? 'bigcartel' : 'other') as ShopItem['platform']
+        } : {})
+      } : item
+    )
+    
+    setShopItems(updatedItems)
+    debouncedSave({
+      profile,
+      projects,
+      mediaItems,
+      sticker,
+      shopItems: updatedItems
+    })
+  }
+
+  const addShopItem = () => {
+    setShopItems(prev => [...prev, {
+      id: Date.now().toString(),
+      title: '',
+      storeUrl: '',
+      image: '',
+      platform: 'other'
+    }])
+  }
+
+  const removeShopItem = (index: number) => {
+    setShopItems(prev => prev.filter((_, i) => i !== index))
+  }
+
+  const [previewMode, setPreviewMode] = useState(true);
+
+  const exampleShopItems: ShopItem[] = [
+    {
+      id: '1',
+      title: 'Wool Runner Mizzles',
+      storeUrl: 'https://allbirds.com/products/mens-wool-runner-up-mizzles',
+      image: 'https://cdn.allbirds.com/image/upload/f_auto,q_auto,w_1000,b_rgb:f5f5f5/cms/2WBWT1_1.jpg',
+      platform: 'shopify'
+    },
+    {
+      id: '2',
+      title: 'Handmade Ceramic Mug',
+      storeUrl: 'https://www.etsy.com/listing/1479574549/handmade-ceramic-mug',
+      image: 'https://i.etsystatic.com/12345678/r/il/123456/1234567890/il_fullxfull.1234567890_abcd.jpg',
+      platform: 'etsy'
+    },
+    {
+      id: '3',
+      title: 'Digital Art Course',
+      storeUrl: 'https://gumroad.com/l/digital-art-course',
+      image: 'https://public-files.gumroad.com/variants/123456/preview.jpg',
+      platform: 'gumroad'
+    }
+  ];
+
+  const displayShopItems = shopItems.length > 0 ? shopItems : exampleShopItems;
+
+  const [shopLoading, setShopLoading] = useState(true)
+
+  useEffect(() => {
+    setTimeout(() => setProjectsLoading(false), 800)
+    setTimeout(() => setVideosLoading(false), 1200)
+    setTimeout(() => setShopLoading(false), 1000)
+  }, [])
+
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
+
+  const [history, setHistory] = useState<HistoryState>({
+    shopItems: [],
+    currentIndex: -1,
+    history: []
+  });
+
   return (
     <div className="dark min-h-screen bg-gray-900 text-gray-100">
       <Navbar 
@@ -1009,9 +1126,11 @@ export default function Component(): JSX.Element {
               isTransitioning ? 'opacity-0' : 'opacity-100'
             }`}>
               {isAuthenticated && isEditing ? (
-                // Edit Mode
-                <div className="bg-gray-800 p-8 rounded-lg shadow-lg">
-                  <h2 className="text-2xl font-bold mb-8">Edit Your Profile</h2>
+                <div className="space-y-8 rounded-lg bg-gray-800/50 p-6">
+                  <div className="flex items-center gap-4 mb-4">
+                    <h3 className="text-xl font-semibold">Profile Details</h3>
+                    <div className="flex-grow border-t border-gray-700" />
+                  </div>
                   <form 
                     onSubmit={(e) => { 
                       e.preventDefault()
@@ -1047,7 +1166,6 @@ export default function Component(): JSX.Element {
                                 className="mt-2" 
                                 aria-label="Upload profile image"
                                 onClick={() => {
-                                  // Programmatically click the hidden file input
                                   document.getElementById('fileInput')?.click()
                                 }}
                               >
@@ -1063,7 +1181,6 @@ export default function Component(): JSX.Element {
                                 const files = e.target.files
                                 if (files && files.length > 0) {
                                   handleImageChange(files[0])
-                                  // Reset the input value so the same file can be selected again
                                   e.target.value = ''
                                 }
                               }} 
@@ -1088,7 +1205,7 @@ export default function Component(): JSX.Element {
                         {formErrors.name && <p className="text-red-500 text-sm mt-1">{formErrors.name}</p>}
                       </div>
 
-                      <div>
+                      <div className="space-y-2">
                         <Label htmlFor="title">Title</Label>
                         <Input
                           id="title"
@@ -1097,7 +1214,9 @@ export default function Component(): JSX.Element {
                           onChange={handleProfileChange}
                           className={`mt-1 ${formErrors.title ? 'border-red-500' : ''}`}
                         />
-                        {formErrors.title && <p className="text-red-500 text-sm mt-1">{formErrors.title}</p>}
+                        <p className="text-sm text-gray-400">
+                          Your role or profession (e.g., "Music Producer" or "Digital Artist")
+                        </p>
                       </div>
 
                       <div>
@@ -1149,6 +1268,67 @@ export default function Component(): JSX.Element {
                       <Button type="button" onClick={addSocialLink} className="mt-2">
                         <Plus className="w-4 h-4 mr-2" /> Add Social Link
                       </Button>
+                    </div>
+
+                    <div className="space-y-8 pt-8 border-t border-gray-700">
+                      <div>
+                        <h3 className="text-xl font-semibold">Section Visibility</h3>
+                        <p className="text-sm text-gray-400 mt-2">
+                          Choose which sections to display on your profile
+                        </p>
+                      </div>
+                      <div className="space-y-4">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="projects-visible"
+                            checked={profile.sectionVisibility.projects}
+                            onCheckedChange={(checked) => {
+                              setProfile(prev => ({
+                                ...prev,
+                                sectionVisibility: {
+                                  ...prev.sectionVisibility,
+                                  projects: checked as boolean
+                                }
+                              }))
+                            }}
+                          />
+                          <Label htmlFor="projects-visible">Show Projects and People section</Label>
+                        </div>
+
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="media-visible"
+                            checked={profile.sectionVisibility.media}
+                            onCheckedChange={(checked) => {
+                              setProfile(prev => ({
+                                ...prev,
+                                sectionVisibility: {
+                                  ...prev.sectionVisibility,
+                                  media: checked as boolean
+                                }
+                              }))
+                            }}
+                          />
+                          <Label htmlFor="media-visible">Show Media section</Label>
+                        </div>
+
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="shop-visible"
+                            checked={profile.sectionVisibility.shop}
+                            onCheckedChange={(checked) => {
+                              setProfile(prev => ({
+                                ...prev,
+                                sectionVisibility: {
+                                  ...prev.sectionVisibility,
+                                  shop: checked as boolean
+                                }
+                              }))
+                            }}
+                          />
+                          <Label htmlFor="shop-visible">Show Shop section</Label>
+                        </div>
+                      </div>
                     </div>
 
                     <div className="space-y-8 pt-8 border-t border-gray-700">
@@ -1251,25 +1431,7 @@ export default function Component(): JSX.Element {
                                       <Input
                                         id={`media-url-${index}`}
                                         value={media.rawUrl || media.id}
-                                        onChange={(e) => {
-                                          const value = e.target.value
-                                          const detectedType = detectMediaType(value)
-                                          const extractedId = extractMediaId(value, detectedType)
-                                          
-                                          setMediaItems(prev => prev.map((item, i) => 
-                                            i === index ? {
-                                              ...item,
-                                              type: detectedType,
-                                              id: extractedId,
-                                              rawUrl: value
-                                            } : item
-                                          ))
-                                        }}
-                                        onKeyDown={(e) => {
-                                          if (e.key === 'Enter') {
-                                            e.preventDefault()
-                                          }
-                                        }}
+                                        onChange={(e) => handleMediaChange(index, 'id', e.target.value)}
                                         placeholder="Paste URL from YouTube, SoundCloud, Spotify, or Apple Music"
                                       />
                                       <p className="text-xs text-gray-400">
@@ -1282,7 +1444,6 @@ export default function Component(): JSX.Element {
                                       </div>
                                     )}
                                   </div>
-
                                   <Button type="button" variant="destructive" onClick={() => removeMedia(index)}>
                                     <Trash2 className="w-4 h-4 mr-2" /> Remove Media
                                   </Button>
@@ -1292,11 +1453,7 @@ export default function Component(): JSX.Element {
                           </AccordionItem>
                         ))}
                       </Accordion>
-                      <Button type="button" onClick={() => setMediaItems(prev => [...prev, { 
-                        id: '', 
-                        type: 'youtube', 
-                        rawUrl: '' 
-                      }])} className="mt-2">
+                      <Button type="button" onClick={addMedia} className="mt-2">
                         <Plus className="w-4 h-4 mr-2" /> Add Media
                       </Button>
                     </div>
@@ -1308,84 +1465,119 @@ export default function Component(): JSX.Element {
                           Connect your online store from Shopify, Etsy, or other platforms to showcase your products.
                         </p>
                       </div>
-                      {/* Shop content (to be added) */}
+                      <Accordion type="single" collapsible>
+                        {shopItems.map((item, index) => (
+                          <AccordionItem key={item.id} value={`shop-${index}`}>
+                            <AccordionTrigger className="flex justify-start gap-4 hover:no-underline">
+                              <div className="flex items-center gap-2">
+                                <span className="font-semibold">
+                                  {item.title || `Store ${index + 1}`}
+                                </span>
+                              </div>
+                            </AccordionTrigger>
+                            <AccordionContent>
+                              {/* Accordion content */}
+                            </AccordionContent>
+                          </AccordionItem>
+                        ))}
+                      </Accordion>
+                      <Button type="button" onClick={addShopItem} className="mt-2">
+                        <Plus className="w-4 h-4 mr-2" /> Add Store
+                      </Button>
                     </div>
 
                     <div className="space-y-8 pt-8 border-t border-gray-700">
-                      <h3 className="text-xl font-semibold">Profile Sticker</h3>
-                      <div className="space-y-4">
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id="sticker-enabled"
-                            checked={sticker.enabled}
-                            onCheckedChange={handleStickerChange}
-                          />
-                          <Label htmlFor="sticker-enabled">Enable profile sticker</Label>
-                        </div>
-                        {sticker.enabled && (
-                          <div className="space-y-4">
-                            <Select
-                              value={sticker.image}
-                              onValueChange={(value) => setSticker(prev => ({ ...prev, image: value }))}
-                            >
-                              <SelectTrigger className="w-[200px]">
-                                <SelectValue placeholder="Select a sticker" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/daisy-blue-1sqZRfemKwLyREL0Eo89EfmQUT5wst.png">
-                                  <div className="flex items-center">
-                                    <div className="w-8 h-8 mr-2 relative">
-                                      <Image 
-                                        src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/daisy-blue-1sqZRfemKwLyREL0Eo89EfmQUT5wst.png" 
-                                        alt="Blue Daisy" 
-                                        fill 
-                                        className="object-contain"
-                                        unoptimized
-                                      />
-                                    </div>
-                                    Blue Daisy
-                                  </div>
-                                </SelectItem>
-                                <SelectItem value="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/daisy-purple-zuy0TjRXzDx6hnayJ249A4Mgp8ktLy.png">
-                                  <div className="flex items-center">
-                                    <div className="w-8 h-8 mr-2 relative">
-                                      <Image src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/daisy-purple-zuy0TjRXzDx6hnayJ249A4Mgp8ktLy.png" alt="Purple Daisy" fill className="object-contain" />
-                                    </div>
-                                    Purple Daisy
-                                  </div>
-                                </SelectItem>
-                                <SelectItem value="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/daisy-white-sWezY97Qz4q7W6zenHPvu3ns9egGwH.png">
-                                  <div className="flex items-center">
-                                    <div className="w-8 h-8 mr-2 relative">
-                                      <Image src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/daisy-white-sWezY97Qz4q7W6zenHPvu3ns9egGwH.png" alt="White Daisy" fill className="object-contain" />
-                                    </div>
-                                    White Daisy
-                                  </div>
-                                </SelectItem>
-                              </SelectContent>
-                            </Select>
-                            
-                            {/* Preview */}
-                            <div className="w-20 h-20 relative mx-auto sticker-rotate">
-                              <Image
-                                src={sticker.image}
-                                alt="Selected sticker preview"
-                                fill
-                                className="object-contain"
-                                unoptimized
-                              />
-                            </div>
+                      <div>
+                        <h3 className="text-xl font-semibold">Profile Sticker</h3>
+                        <div className="space-y-4">
+                          <div className="flex items-center space-x-2">
+                            <Checkbox
+                              id="sticker-enabled"
+                              checked={sticker.enabled}
+                              onCheckedChange={handleStickerChange}
+                            />
+                            <Label htmlFor="sticker-enabled">Enable profile sticker</Label>
                           </div>
-                        )}
+                          {sticker.enabled && (
+                            <div className="space-y-4">
+                              <Select
+                                value={sticker.image}
+                                onValueChange={(value) => setSticker(prev => ({ ...prev, image: value }))}
+                              >
+                                <SelectTrigger className="w-[200px]">
+                                  <SelectValue placeholder="Select a sticker" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/daisy-blue-1sqZRfemKwLyREL0Eo89EfmQUT5wst.png">
+                                    <div className="flex items-center">
+                                      <div className="w-8 h-8 mr-2 relative">
+                                        <Image 
+                                          src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/daisy-blue-1sqZRfemKwLyREL0Eo89EfmQUT5wst.png" 
+                                          alt="Blue Daisy" 
+                                          fill 
+                                          className="object-contain"
+                                          unoptimized
+                                        />
+                                      </div>
+                                      Blue Daisy
+                                    </div>
+                                  </SelectItem>
+                                  <SelectItem value="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/daisy-purple-zuy0TjRXzDx6hnayJ249A4Mgp8ktLy.png">
+                                    <div className="flex items-center">
+                                      <div className="w-8 h-8 mr-2 relative">
+                                        <Image src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/daisy-purple-zuy0TjRXzDx6hnayJ249A4Mgp8ktLy.png" alt="Purple Daisy" fill className="object-contain" />
+                                      </div>
+                                      Purple Daisy
+                                    </div>
+                                  </SelectItem>
+                                  <SelectItem value="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/daisy-white-sWezY97Qz4q7W6zenHPvu3ns9egGwH.png">
+                                    <div className="flex items-center">
+                                      <div className="w-8 h-8 mr-2 relative">
+                                        <Image src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/daisy-white-sWezY97Qz4q7W6zenHPvu3ns9egGwH.png" alt="White Daisy" fill className="object-contain" />
+                                      </div>
+                                      White Daisy
+                                    </div>
+                                  </SelectItem>
+                                </SelectContent>
+                              </Select>
+                              
+                              <div className="w-20 h-20 relative mx-auto sticker-rotate">
+                                <Image
+                                  src={sticker.image}
+                                  alt="Selected sticker preview"
+                                  fill
+                                  className="object-contain"
+                                  unoptimized
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
-                    <div className="flex justify-end space-x-4 pt-8 border-t border-gray-700">
-                      <Button type="button" variant="outline" onClick={() => setIsEditing(false)}>
-                        Cancel
-                      </Button>
-                      <Button type="submit">
-                        Save
-                      </Button>
+                    <div className="fixed bottom-0 left-0 right-0 bg-gray-900/95 backdrop-blur-sm border-t border-gray-800">
+                      <div className="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
+                        <div className="flex items-center space-x-4">
+                          <div className="text-sm text-gray-400">
+                            Changes save automatically
+                          </div>
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            type="button"
+                            onClick={() => setPreviewMode(!previewMode)}
+                          >
+                            {previewMode ? 'Exit Preview' : 'Preview'}
+                          </Button>
+                        </div>
+                        <Button 
+                          variant="outline" 
+                          onClick={() => setIsEditing(false)}
+                          className="px-6 py-2 text-lg border-2 border-cyan-300/60 hover:border-cyan-300/80 transition-colors"
+                        >
+                          Done Editing
+                        </Button>
+                      </div>
                     </div>
                   </form>
                   {showCropDialog && (
@@ -1487,7 +1679,6 @@ export default function Component(): JSX.Element {
                                 Icon = User
                             }
                             
-                            // Show greyed out icon if no URL
                             return (
                               <Button 
                                 key={index} 
@@ -1516,19 +1707,26 @@ export default function Component(): JSX.Element {
                         </div>
 
                         {isAuthenticated && (
-                          <Button onClick={() => setIsEditing(true)} variant="outline" className="mt-4">
-                            <Edit2 className="mr-2 h-4 w-4" /> Edit Profile
+                          <Button 
+                            onClick={() => setIsEditing(true)} 
+                            variant="outline" 
+                            className="mt-4 border-cyan-300/30 hover:border-cyan-300/60 transition-colors"
+                          >
+                            <Edit2 className="mr-2 h-4 w-4" /> 
+                            Edit Profile
                           </Button>
                         )}
                       </div>
                     </div>
                   </div>
                   {profile.sectionVisibility.projects && (
-                    <div className="mt-16 sm:mt-24 max-w-6xl mx-auto px-4 mb-24">
-                      <h2 className="text-4xl font-bold text-white text-center mb-12">PROJECTS and PEOPLE</h2>
+                    <div className="mt-24 sm:mt-32 max-w-6xl mx-auto px-4 mb-24 opacity-0 animate-fadeIn" 
+                         style={{ animationDelay: '150ms', animationFillMode: 'forwards' }}>
+                      <h2 className="text-3xl font-semibold text-gray-100/90 text-center mb-12 tracking-wide">
+                        PROJECTS and PEOPLE
+                      </h2>
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                         {projectsLoading ? (
-                          // Show skeleton loading cards
                           Array(3).fill(0).map((_, i) => (
                             <Card key={i} className="bg-gray-800/50 border-gray-700 overflow-hidden min-h-[5rem] animate-pulse">
                               <div className="flex h-full">
@@ -1594,10 +1792,11 @@ export default function Component(): JSX.Element {
                   )}
                   {profile.sectionVisibility.media && (
                     <div className="mt-16 sm:mt-24 max-w-6xl mx-auto px-4 mb-24">
-                      <h2 className="text-4xl font-bold text-white text-center mb-12">MEDIA</h2>
+                      <h2 className="text-3xl font-semibold text-white text-center mb-12">
+                        MEDIA
+                      </h2>
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                         {videosLoading ? (
-                          // Show skeleton loading cards
                           Array(2).fill(0).map((_, i) => (
                             <Card key={i} className="w-full max-w-[560px] mx-auto animate-pulse">
                               <CardContent className="p-4">
@@ -1607,7 +1806,6 @@ export default function Component(): JSX.Element {
                             </Card>
                           ))
                         ) : (
-                          // Only show first 6 items
                           mediaItems.slice(0, 6).map((video, index) => (
                             <Card key={index} className="w-full max-w-[560px] mx-auto">
                               <CardContent className="p-4">
@@ -1621,8 +1819,14 @@ export default function Component(): JSX.Element {
                   )}
                   {profile.sectionVisibility.shop && (
                     <div className="mt-16 sm:mt-24 max-w-6xl mx-auto px-4 mb-24">
-                      <h2 className="text-4xl font-bold text-white text-center mb-12">SHOP</h2>
-                      {/* Shop content (to be added) */}
+                      <h2 className="text-3xl font-semibold text-white text-center mb-12">
+                        SHOP
+                      </h2>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {shopItems.map((item) => (
+                          <ShopItemCard key={item.id} item={item} />
+                        ))}
+                      </div>
                     </div>
                   )}
                   {sticker.enabled && (
@@ -1638,6 +1842,7 @@ export default function Component(): JSX.Element {
                       </div>
                     </div>
                   )}
+                  <div className="max-w-2xl mx-auto border-t border-gray-800/50" />
                 </>
               )}
             </div>
