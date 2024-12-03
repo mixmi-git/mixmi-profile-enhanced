@@ -22,6 +22,7 @@ import ReactCrop, { Crop as CropType } from 'react-image-crop'
 import 'react-image-crop/dist/ReactCrop.css'
 import { parseGIF, decompressFrames } from 'gifuct-js'
 import { useAuth } from "@/lib/auth"
+import { exampleProjects, exampleMediaItems, exampleShopItems } from '@/lib/example-content'
 
 // Add custom TikTok icon component
 const TikTokIcon = () => (
@@ -72,6 +73,7 @@ export interface Profile {
     media: boolean;
     shop: boolean;
   };
+  spotlightDescription: string;
 }
 
 // Add interface for form errors
@@ -193,13 +195,17 @@ const MediaEmbed = memo(({ item }: { item: MediaItem }) => {
   }
 })
 
-// Update the ShopItem interface
+// Update the ShopItem interface and related types
+export type ShopPlatform = 'shopify' | 'etsy' | 'gumroad' | 'bigcartel' | 'other';
+export type ShopItemType = 'shopify-product' | 'etsy-listing' | 'gumroad-product' | 'bigcartel-product' | 'other';
+
 export interface ShopItem {
   id: string;
   title: string;
   storeUrl: string;
   image: string;
-  platform: 'shopify' | 'etsy' | 'gumroad' | 'bigcartel' | 'other';
+  platform: ShopPlatform;
+  description?: string;
 }
 
 // Simplified shop card
@@ -407,36 +413,26 @@ const getMediaDisplayName = (url: string, type: MediaItem['type']): string => {
   }
 }
 
-export interface ShopItem {
-  id: string;
-  title: string;
-  storeUrl: string;
-  image: string;
-  platform: 'shopify' | 'etsy' | 'gumroad' | 'bigcartel' | 'other';
-}
-
-const detectShopType = (url: string): ShopItem['type'] => {
+// Update the detection function
+const detectShopType = (url: string): ShopItemType => {
   if (url.includes('shopify.com')) return 'shopify-product'
   if (url.includes('etsy.com')) return 'etsy-listing'
   if (url.includes('gumroad.com')) return 'gumroad-product'
   if (url.includes('bigcartel.com')) return 'bigcartel-product'
-  return 'shopify-product'
+  return 'other'
 }
 
-const generateShopEmbed = (url: string, type: ShopItem['type']): string => {
+// Update the embed function
+const generateShopEmbed = (url: string, type: ShopItemType): string => {
   switch (type) {
     case 'shopify-product':
-      // Convert product URL to embed URL
       return url.replace('/products/', '/products/embed/')
     case 'etsy-listing':
-      // Extract listing ID and create embed URL
       const etsyMatch = url.match(/listing\/(\d+)/)
       return etsyMatch ? `https://www.etsy.com/listing/${etsyMatch[1]}/embed` : url
     case 'gumroad-product':
-      // Convert to embed URL
       return url.replace('/l/', '/l/embed/')
     case 'bigcartel-product':
-      // Convert to embed URL
       return url + '/embed'
     default:
       return url
@@ -456,14 +452,39 @@ const GumroadIcon = ({ className }: { className?: string }) => (
   <Gift className={className} />
 )
 
-// Add this with other constants
-const defaultProductImage = "/images/product-placeholder.png"
+// Update this constant
+const defaultProductImage = "/images/shop-placeholder.jpg"
 
 // Add history state
 interface HistoryState {
   shopItems: ShopItem[];
   currentIndex: number;
   history: ShopItem[][];
+}
+
+// Update the ProjectCard component for a more visual layout
+const ProjectCard = ({ project }: { project: Project }) => {
+  return (
+    <Card className="overflow-hidden group hover:border-cyan-300/50 transition-all duration-300">
+      <div className="relative aspect-[16/9] bg-gray-800/50">
+        <Image
+          src={project.image || '/images/next-event-placeholder.jpg'}
+          alt={project.title}
+          fill
+          className="object-cover transition-transform duration-300 group-hover:scale-105"
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+        />
+      </div>
+      <CardContent className="p-4">
+        <h3 className="font-semibold text-lg text-gray-100 mb-2">
+          {project.title}
+        </h3>
+        <p className="text-sm text-gray-400">
+          {project.description}
+        </p>
+      </CardContent>
+    </Card>
+  )
 }
 
 export default function Component(): JSX.Element {
@@ -506,7 +527,8 @@ export default function Component(): JSX.Element {
               projects: true,
               media: true,
               shop: true
-            }
+            },
+            spotlightDescription: ""
           },
           projects: data.projects || [],
           mediaItems: data.mediaItems || [],
@@ -530,7 +552,8 @@ export default function Component(): JSX.Element {
             projects: true,
             media: true,
             shop: true
-          }
+          },
+          spotlightDescription: ""
         },
         projects: [],
         mediaItems: [],
@@ -578,7 +601,8 @@ export default function Component(): JSX.Element {
       projects: true,
       media: true,
       shop: true
-    }
+    },
+    spotlightDescription: ""
   })
 
   useEffect(() => {
@@ -590,44 +614,9 @@ export default function Component(): JSX.Element {
     setIsLoading(false)
   }, [])
 
-  const [projects, setProjects] = useState<Project[]>([
-    {
-      id: 1,
-      title: "Beach Raves",
-      description: "Dec 22, 2024",
-      image: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/monet-dj-ijo4Skv1UWUECLLODKs79m5V5SnPe0.png",
-      link: "https://www.musicfestivalwizard.com/festivals/strings-sol-2024/"
-    },
-    {
-      id: 2,
-      title: "Loca",
-      description: "Collab with Dimitri La Bruxa",
-      image: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/sound-to-paint-vOShTpAQOvRH7h1koaIWTeWJ9hixfJ.png",
-      link: "https://music.apple.com/us/artist/dimitri-la-bruxa/1635695619"
-    },
-    {
-      id: 3,
-      title: "Is Bitcoin Still Money?",
-      description: "Collab with Fluffy Toy",
-      image: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/money-city-VCzdAZl8Hro6VNu0u3rSDcKnHSbR9j.png",
-      link: "https://youtu.be/-IjB8MSLmMo"
-    }
-  ])
+  const [projects, setProjects] = useState<Project[]>([])
 
-  const [mediaItems, setMediaItems] = useState<MediaItem[]>([
-    { 
-      id: 'BFJu2NrIfx0', 
-      type: 'youtube'
-    },
-    { 
-      id: 'A3QlF7Myeco', 
-      type: 'youtube'
-    },
-    { 
-      id: 'rvGABUgyCOA', 
-      type: 'youtube'
-    }
-  ])
+  const [mediaItems, setMediaItems] = useState<MediaItem[]>([])
 
   const handleLoginToggle = () => {
     setIsTransitioning(true)
@@ -650,7 +639,8 @@ export default function Component(): JSX.Element {
               projects: true,
               media: true,
               shop: true
-            }
+            },
+            spotlightDescription: ""
           })
           setProjects([])
           setMediaItems([])
@@ -820,6 +810,19 @@ export default function Component(): JSX.Element {
 
   const handleProjectImageChange = (index: number, file: File | null) => {
     if (file) {
+      const isGif = file.type === 'image/gif'
+      const isValidImage = file.type.startsWith('image/')
+      
+      if (!isValidImage) {
+        console.error("Please upload an image file")
+        return
+      }
+
+      if (isGif && file.size > 5 * 1024 * 1024) {
+        console.error("GIF must be less than 5MB")
+        return
+      }
+
       const reader = new FileReader()
       reader.onloadend = () => {
         setProjects(prev => prev.map((project, i) => 
@@ -1049,32 +1052,6 @@ export default function Component(): JSX.Element {
 
   const [previewMode, setPreviewMode] = useState(true);
 
-  const exampleShopItems: ShopItem[] = [
-    {
-      id: '1',
-      title: 'Wool Runner Mizzles',
-      storeUrl: 'https://allbirds.com/products/mens-wool-runner-up-mizzles',
-      image: 'https://cdn.allbirds.com/image/upload/f_auto,q_auto,w_1000,b_rgb:f5f5f5/cms/2WBWT1_1.jpg',
-      platform: 'shopify'
-    },
-    {
-      id: '2',
-      title: 'Handmade Ceramic Mug',
-      storeUrl: 'https://www.etsy.com/listing/1479574549/handmade-ceramic-mug',
-      image: 'https://i.etsystatic.com/12345678/r/il/123456/1234567890/il_fullxfull.1234567890_abcd.jpg',
-      platform: 'etsy'
-    },
-    {
-      id: '3',
-      title: 'Digital Art Course',
-      storeUrl: 'https://gumroad.com/l/digital-art-course',
-      image: 'https://public-files.gumroad.com/variants/123456/preview.jpg',
-      platform: 'gumroad'
-    }
-  ];
-
-  const displayShopItems = shopItems.length > 0 ? shopItems : exampleShopItems;
-
   const [shopLoading, setShopLoading] = useState(true)
 
   useEffect(() => {
@@ -1090,6 +1067,10 @@ export default function Component(): JSX.Element {
     currentIndex: -1,
     history: []
   });
+
+  const displayProjects = projects.length > 0 ? projects : exampleProjects;
+  const displayMedia = mediaItems.length > 0 ? mediaItems : exampleMediaItems;
+  const displayShop = shopItems.length > 0 ? shopItems : exampleShopItems;
 
   return (
     <div className="dark min-h-screen bg-gray-900 text-gray-100">
@@ -1155,9 +1136,14 @@ export default function Component(): JSX.Element {
                         >
                           <div className="flex flex-col items-center space-y-2">
                             <ImageDisplay />
-                            <p className="text-sm text-gray-300">
-                              Drag & drop an image here, or click to select one
-                            </p>
+                            <div className="text-center">
+                              <p className="text-sm text-gray-300">
+                                Drag & drop an image here, or click to select one
+                              </p>
+                              <p className="text-sm text-gray-400 mt-1">
+                                Supports JPG, PNG, and GIFs under 5MB
+                              </p>
+                            </div>
                             <Label htmlFor="fileInput" className="cursor-pointer">
                               <Button 
                                 type="button" 
@@ -1376,6 +1362,9 @@ export default function Component(): JSX.Element {
                                   </div>
                                   <div>
                                     <Label htmlFor={`project-image-${index}`}>Project Image</Label>
+                                    <p className="text-sm text-gray-400 mt-1 mb-2">
+                                      Supports JPG, PNG, and GIFs under 5MB
+                                    </p>
                                     <div className="mt-2 flex items-center space-x-4">
                                       {project.image && (
                                         <div className="relative w-24 h-24 rounded-lg overflow-hidden">
@@ -1462,7 +1451,7 @@ export default function Component(): JSX.Element {
                       <div>
                         <h3 className="text-xl font-semibold">Shop</h3>
                         <p className="text-sm text-gray-400 mt-2">
-                          Connect your online store from Shopify, Etsy, or other platforms to showcase your products.
+                          Connect your online store from Shopify, Etsy, or other platforms to showcase your products, merchandise, and token-gated content
                         </p>
                       </div>
                       <Accordion type="single" collapsible>
@@ -1710,10 +1699,11 @@ export default function Component(): JSX.Element {
                           <Button 
                             onClick={() => setIsEditing(true)} 
                             variant="outline" 
-                            className="mt-4 border-cyan-300/30 hover:border-cyan-300/60 transition-colors"
+                            className="mt-4 border-cyan-300/30 hover:border-cyan-300/80 transition-colors group"
                           >
-                            <Edit2 className="mr-2 h-4 w-4" /> 
-                            Edit Profile
+                            <Edit2 className="mr-2 h-4 w-4 group-hover:text-cyan-300" /> 
+                            <span className="group-hover:text-cyan-300">Edit Profile</span>
+                            <span className="ml-2 text-xs text-gray-400">(Add your content)</span>
                           </Button>
                         )}
                       </div>
@@ -1722,79 +1712,43 @@ export default function Component(): JSX.Element {
                   {profile.sectionVisibility.projects && (
                     <div className="mt-24 sm:mt-32 max-w-6xl mx-auto px-4 mb-24 opacity-0 animate-fadeIn" 
                          style={{ animationDelay: '150ms', animationFillMode: 'forwards' }}>
-                      <h2 className="text-3xl font-semibold text-gray-100/90 text-center mb-12 tracking-wide">
-                        PROJECTS and PEOPLE
+                      <h2 className="text-3xl font-semibold text-white text-center mb-4">
+                        SPOTLIGHT
                       </h2>
+                      {projects.length === 0 && (
+                        <p className="text-sm text-gray-400 text-center mb-12">
+                          Share projects, profiles, and collaborations
+                        </p>
+                      )}
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                         {projectsLoading ? (
                           Array(3).fill(0).map((_, i) => (
-                            <Card key={i} className="bg-gray-800/50 border-gray-700 overflow-hidden min-h-[5rem] animate-pulse">
-                              <div className="flex h-full">
-                                <div className="w-24 bg-gray-700"></div>
-                                <div className="p-3 flex-grow">
-                                  <div className="h-4 bg-gray-700 rounded w-3/4 mb-2"></div>
-                                  <div className="h-3 bg-gray-700 rounded w-1/2"></div>
-                                </div>
+                            <Card key={i} className="bg-gray-800/50 border-gray-700 overflow-hidden animate-pulse">
+                              <div className="aspect-[3/2] bg-gray-700" />
+                              <div className="p-4">
+                                <div className="h-5 bg-gray-700 rounded w-3/4 mb-2" />
+                                <div className="h-4 bg-gray-700 rounded w-1/2" />
                               </div>
                             </Card>
                           ))
                         ) : (
-                          <>
-                            {projects.slice(0, visibleProjects).map((project) => (
-                              <Card 
-                                key={project.id} 
-                                className="bg-gray-800/50 border-gray-700 overflow-hidden min-h-[5rem] opacity-0 animate-fadeIn"
-                                style={{
-                                  animationDelay: `${project.id * 150}ms`,
-                                  animationFillMode: 'forwards'
-                                }}
-                              >
-                                <Link 
-                                  href={project.link} 
-                                  className="flex h-full group"
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  referrerPolicy="no-referrer"
-                                >
-                                  <div className="flex h-full">
-                                    <div className="relative w-24 h-full p-1">
-                                      <div className="relative w-full h-full rounded-[3px] overflow-hidden">
-                                        <Image
-                                          src={project.image}
-                                          alt={project.title}
-                                          fill
-                                          className="object-cover"
-                                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                                        />
-                                      </div>
-                                    </div>
-                                    <div className="p-3 flex flex-col justify-center flex-grow">
-                                      <h3 className="text-lg font-bold text-white mb-1">{project.title}</h3>
-                                      <p className="text-sm text-gray-300 line-clamp-2">{project.description}</p>
-                                    </div>
-                                  </div>
-                                </Link>
-                              </Card>
-                            ))}
-                            {visibleProjects < projects.length && (
-                              <Button 
-                                onClick={loadMoreProjects}
-                                variant="ghost" 
-                                className="col-span-full mx-auto mt-4"
-                              >
-                                Load More Projects
-                              </Button>
-                            )}
-                          </>
+                          displayProjects.map((project) => (
+                            <ProjectCard key={project.id} project={project} />
+                          ))
                         )}
                       </div>
                     </div>
                   )}
                   {profile.sectionVisibility.media && (
                     <div className="mt-16 sm:mt-24 max-w-6xl mx-auto px-4 mb-24">
-                      <h2 className="text-3xl font-semibold text-white text-center mb-12">
+                      <h2 className="text-3xl font-semibold text-white text-center mb-4">
                         MEDIA
                       </h2>
+                      {mediaItems.length === 0 && (
+                        <p className="text-sm text-gray-400 text-center mb-12">
+                          Share your music, videos, and playlists from YouTube, Spotify, and more
+                        </p>
+                      )}
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                         {videosLoading ? (
                           Array(2).fill(0).map((_, i) => (
@@ -1806,11 +1760,9 @@ export default function Component(): JSX.Element {
                             </Card>
                           ))
                         ) : (
-                          mediaItems.slice(0, 6).map((video, index) => (
-                            <Card key={index} className="w-full max-w-[560px] mx-auto">
-                              <CardContent className="p-4">
-                                <MediaEmbed item={video} />
-                              </CardContent>
+                          displayMedia.map((video, index) => (
+                            <Card key={index}>
+                              <MediaEmbed item={video} />
                             </Card>
                           ))
                         )}
@@ -1819,11 +1771,16 @@ export default function Component(): JSX.Element {
                   )}
                   {profile.sectionVisibility.shop && (
                     <div className="mt-16 sm:mt-24 max-w-6xl mx-auto px-4 mb-24">
-                      <h2 className="text-3xl font-semibold text-white text-center mb-12">
+                      <h2 className="text-3xl font-semibold text-white text-center mb-4">
                         SHOP
                       </h2>
+                      {shopItems.length === 0 && (
+                        <p className="text-sm text-gray-400 text-center mb-12">
+                          Connect your store to showcase your products, merchandise, and token-gated content
+                        </p>
+                      )}
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {shopItems.map((item) => (
+                        {displayShop.map((item) => (
                           <ShopItemCard key={item.id} item={item} />
                         ))}
                       </div>
