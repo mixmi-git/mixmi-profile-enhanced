@@ -15,6 +15,42 @@ declare module 'react' {
     className?: string;
   }
 
+  export interface InputHTMLAttributes<T> extends HTMLAttributes<T> {
+    accept?: string;
+    alt?: string;
+    autoComplete?: string;
+    autoFocus?: boolean;
+    capture?: boolean | string;
+    checked?: boolean;
+    crossOrigin?: string;
+    disabled?: boolean;
+    enterKeyHint?: 'enter' | 'done' | 'go' | 'next' | 'previous' | 'search' | 'send';
+    form?: string;
+    formAction?: string;
+    formEncType?: string;
+    formMethod?: string;
+    formNoValidate?: boolean;
+    formTarget?: string;
+    height?: number | string;
+    list?: string;
+    max?: number | string;
+    maxLength?: number;
+    min?: number | string;
+    minLength?: number;
+    multiple?: boolean;
+    name?: string;
+    pattern?: string;
+    placeholder?: string;
+    readOnly?: boolean;
+    required?: boolean;
+    size?: number;
+    src?: string;
+    step?: number | string;
+    type?: string;
+    value?: string | number | readonly string[];
+    width?: number | string;
+  }
+
   namespace JSX {
     interface IntrinsicElements {
       div: React.DetailedHTMLProps<React.HTMLAttributes<HTMLDivElement>, HTMLDivElement>;
@@ -81,4 +117,25 @@ declare module 'react' {
   }
 
   export type Key = string | number;
+
+  export interface ChangeEvent<T = Element> extends SyntheticEvent<T> {
+    target: T & EventTarget;
+  }
+
+  export type ChangeEventHandler<T = Element> = (event: ChangeEvent<T>) => void;
+
+  export interface SyntheticEvent<T = Element> {
+    bubbles: boolean;
+    currentTarget: T;
+    cancelable: boolean;
+    defaultPrevented: boolean;
+    eventPhase: number;
+    isTrusted: boolean;
+    nativeEvent: Event;
+    preventDefault(): void;
+    stopPropagation(): void;
+    target: EventTarget;
+    timeStamp: number;
+    type: string;
+  }
 } 
