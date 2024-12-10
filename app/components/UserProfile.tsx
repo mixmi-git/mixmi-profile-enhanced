@@ -1072,6 +1072,25 @@ export default function Component(): JSX.Element {
   const displayMedia = mediaItems.length > 0 ? mediaItems : exampleMediaItems;
   const displayShop = shopItems.length > 0 ? shopItems : exampleShopItems;
 
+  const handleShopImageChange = (index: number, file: File | null) => {
+    if (file) {
+      const isValidImage = file.type.startsWith('image/')
+      
+      if (!isValidImage) {
+        console.error("Please upload an image file")
+        return
+      }
+
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setShopItems(prev => prev.map((item, i) => 
+          i === index ? { ...item, image: reader.result as string } : item
+        ))
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
   return (
     <div className="dark min-h-screen bg-gray-900 text-gray-100">
       <Navbar 
@@ -1465,7 +1484,69 @@ export default function Component(): JSX.Element {
                               </div>
                             </AccordionTrigger>
                             <AccordionContent>
-                              {/* Accordion content */}
+                              <Card className="mb-4 p-4 bg-gray-700">
+                                <CardContent className="space-y-4">
+                                  <div>
+                                    <Label htmlFor={`store-title-${index}`}>Store Title</Label>
+                                    <Input
+                                      id={`store-title-${index}`}
+                                      value={item.title}
+                                      onChange={(e) => handleShopItemChange(index, 'title', e.target.value)}
+                                      className="mt-1"
+                                      placeholder="e.g., My Etsy Shop"
+                                    />
+                                  </div>
+                                  
+                                  <div>
+                                    <Label htmlFor={`store-url-${index}`}>Store URL</Label>
+                                    <Input
+                                      id={`store-url-${index}`}
+                                      value={item.storeUrl}
+                                      onChange={(e) => handleShopItemChange(index, 'storeUrl', e.target.value)}
+                                      className="mt-1"
+                                      placeholder="https://..."
+                                    />
+                                    <p className="text-xs text-gray-400 mt-1">
+                                      Supports Shopify, Etsy, Gumroad, and BigCartel stores
+                                    </p>
+                                  </div>
+
+                                  <div>
+                                    <Label htmlFor={`store-image-${index}`}>Store Image</Label>
+                                    <div className="mt-2 flex items-center space-x-4">
+                                      {item.image && (
+                                        <div className="relative w-24 h-24 rounded-lg overflow-hidden">
+                                          <Image 
+                                            src={item.image} 
+                                            alt={item.title || 'Store image'} 
+                                            fill 
+                                            className="object-cover"
+                                          />
+                                        </div>
+                                      )}
+                                      <Input
+                                        id={`store-image-${index}`}
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={(e) => {
+                                          const files = e.target.files
+                                          if (files && files.length > 0) {
+                                            handleShopImageChange(index, files[0])
+                                          }
+                                        }}
+                                      />
+                                    </div>
+                                  </div>
+
+                                  <Button 
+                                    type="button" 
+                                    variant="destructive" 
+                                    onClick={() => removeShopItem(index)}
+                                  >
+                                    <Trash2 className="w-4 h-4 mr-2" /> Remove Store
+                                  </Button>
+                                </CardContent>
+                              </Card>
                             </AccordionContent>
                           </AccordionItem>
                         ))}
