@@ -1,71 +1,64 @@
-# Enhanced Profile Template
+# Mixmi Profile Project
 
-An enhanced version of the mixmi profile template with advanced features and improved user experience.
+A Next.js-based profile page system with Web3 authentication and rich media features.
 
-## Features
+## Core Features
 
-### Image Handling
-- Image upload with drag & drop support
-- Interactive image cropping interface
-- GIF support with automatic size validation
-- Automatic compression for large files
+- Stacks wallet authentication
+- Profile editing with image cropping
+- Media embeds (YouTube, SoundCloud, Apple Music)
+- Project showcase with consistent square image cards
+- Enhanced placeholder content
 
-### UI/UX
-- Sticky navigation with blur effect
-- Progressive loading for projects and videos
-- Smooth transitions and animations
-- Responsive layout for all devices
+## Project Structure
 
-### Content Management
-- Social media integration
-- Project showcase with thumbnails
-- YouTube video embedding
-- Interactive sticker selection
-- Local storage persistence
+newer-profile-test/
+├── app/
+│ ├── page.tsx           # Main entry point
+│ └── UserProfile.tsx    # Core profile component
+├── components/
+│ ├── auth/
+│ │   └── auth.tsx      # Wallet integration
+│ └── media/            # Media embed components
+├── types/
+│ └── global.d.ts       # Minimal type declarations
+└── public/
+    └── images/         # Static assets
 
-### Developer Features
-- TypeScript support
-- Component-based architecture
-- Error handling and validation
-- Loading states and fallbacks
 
-## Getting Started
+## Technical Stack
 
-1. Clone the repository
+### Core Versions
+- Next.js: 14.2.16
+- React: [Current version - DO NOT UPDATE]
+- shadcn/ui components
 
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+### Dependencies Status
+✅ All dependencies are up to date
+✅ No vulnerability warnings
+✅ Clean npm install (only funding notifications)
 
-## Getting Started
+### Known Working State
+- All core features functioning
+- Profile display and image handling working
+- Project cards displaying correctly
+- Media embeds operational
 
-First, run the development server:
+### Known Issues
+- Store accordion in Shop section not functioning (low priority)
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+### ⚠️ Important Notes
+1. DO NOT update React version - known to cause breaking changes
+2. Exercise caution when updating any dependencies
+3. Test thoroughly after any modification
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Development Guidelines
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. Make minimal, incremental changes
+2. Test immediately after each change
+3. Document any modifications
+4. Maintain working version commits
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
-## Learn More
 
-To learn more about Next.js, take a look at the following resources:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
