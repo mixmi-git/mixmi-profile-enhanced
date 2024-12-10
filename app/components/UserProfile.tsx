@@ -24,16 +24,18 @@ import { parseGIF, decompressFrames } from 'gifuct-js'
 import { useAuth } from "@/lib/auth"
 import { exampleProjects, exampleMediaItems, exampleShopItems } from '@/lib/example-content'
 import { SocialLinks } from "@/components/profile/SocialLinks"
+import { SpotlightSection } from "@/components/profile/SpotlightSection"
+import { MediaSection } from "@/components/profile/MediaSection"
 
 // Add custom TikTok icon component
 const TikTokIcon = () => (
-  <svg 
-    viewBox="0 0 24 24" 
-    className="h-5 w-5 sm:h-6 sm:w-6" 
+  <svg
+    viewBox="0 0 24 24"
+    className="h-5 w-5 sm:h-6 sm:w-6"
     fill="currentColor"
     aria-hidden="true"
   >
-    <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/>
+    <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z" />
   </svg>
 )
 
@@ -179,10 +181,10 @@ const MediaEmbed = memo(({ item }: { item: MediaItem }) => {
             className="absolute top-0 left-0 w-full h-full"
             allow="autoplay *; encrypted-media *; fullscreen *"
             frameBorder="0"
-            style={{ 
-              width: '100%', 
-              maxWidth: '660px', 
-              overflow: 'hidden', 
+            style={{
+              width: '100%',
+              maxWidth: '660px',
+              overflow: 'hidden',
               background: 'transparent',
               borderRadius: '10px'
             }}
@@ -214,7 +216,7 @@ const ShopItemCard = ({ item, isEditing = false }: { item: ShopItem, isEditing?:
   return (
     <Card className={`w-full overflow-hidden group ${isEditing ? 'max-w-sm' : ''}`}>
       <CardContent className="p-0">
-        <a 
+        <a
           href={item.storeUrl}
           target="_blank"
           rel="noopener noreferrer"
@@ -261,8 +263,8 @@ function Navbar({ isAuthenticated, onLoginToggle }: NavbarProps) {
         </Link>
       </div>
       <div className="flex items-center space-x-4">
-        <Button 
-          variant="outline" 
+        <Button
+          variant="outline"
           className="text-white border-white hover:bg-gray-800"
           onClick={onLoginToggle}
         >
@@ -287,10 +289,10 @@ const extractMediaId = (url: string, type: MediaItem['type']): string => {
         const iframeSrcRegex = /src="([^"]+)"/
         const iframeMatch = url.match(iframeSrcRegex)
         if (iframeMatch) return iframeMatch[1]
-        
+
         const scRegex = /soundcloud\.com\/([^\/]+\/(?:sets\/)?[^\/]+)/
         const scMatch = url.match(scRegex)
-        return scMatch 
+        return scMatch
           ? `https://w.soundcloud.com/player/?url=https://soundcloud.com/${scMatch[1]}&color=%23ff5500&auto_play=false&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true&visual=true`
           : url
 
@@ -574,7 +576,7 @@ export default function Component(): JSX.Element {
     bio: '',
     socialLinks: []
   })
-  
+
   const [sticker, setSticker] = useState<Sticker>({
     enabled: true,
     image: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/daisy-blue-1sqZRfemKwLyREL0Eo89EfmQUT5wst.png"
@@ -663,12 +665,12 @@ export default function Component(): JSX.Element {
   }
 
   const debouncedSave = useCallback(
-    debounce((data: { 
-      profile: Profile; 
-      projects: Project[]; 
-      mediaItems: MediaItem[]; 
+    debounce((data: {
+      profile: Profile;
+      projects: Project[];
+      mediaItems: MediaItem[];
       sticker: Sticker;
-      shopItems: ShopItem[]; 
+      shopItems: ShopItem[];
     }) => {
       saveToLocalStorage(data)
     }, 1000),
@@ -684,7 +686,7 @@ export default function Component(): JSX.Element {
 
       const isGif = file.type === 'image/gif'
       const isValidImage = file.type.startsWith('image/')
-      
+
       if (!isValidImage) {
         setImageError("Please upload an image file")
         setImageLoading(false)
@@ -718,7 +720,7 @@ export default function Component(): JSX.Element {
           const img = document.createElement('img')
           img.onload = () => {
             const isSquare = img.width === img.height
-            
+
             setCropState(prev => ({
               ...prev,
               crop: {
@@ -731,7 +733,7 @@ export default function Component(): JSX.Element {
               },
               imageRef: null
             }))
-            
+
             setTempImage(reader.result as string)
             setShowCropDialog(true)
             setImageLoading(false)
@@ -770,7 +772,7 @@ export default function Component(): JSX.Element {
   const handleSocialLinkChange = (index: number, field: string, value: string) => {
     setProfile(prev => ({
       ...prev,
-      socialLinks: prev.socialLinks.map((link, i) => 
+      socialLinks: prev.socialLinks.map((link, i) =>
         i === index ? { ...link, [field]: value } : link
       )
     }))
@@ -804,7 +806,7 @@ export default function Component(): JSX.Element {
   }, [])
 
   const handleProjectChange = (index: number, field: keyof Project, value: string) => {
-    setProjects(prev => prev.map((project, i) => 
+    setProjects(prev => prev.map((project, i) =>
       i === index ? { ...project, [field]: value } : project
     ))
   }
@@ -813,7 +815,7 @@ export default function Component(): JSX.Element {
     if (file) {
       const isGif = file.type === 'image/gif'
       const isValidImage = file.type.startsWith('image/')
-      
+
       if (!isValidImage) {
         console.error("Please upload an image file")
         return
@@ -826,7 +828,7 @@ export default function Component(): JSX.Element {
 
       const reader = new FileReader()
       reader.onloadend = () => {
-        setProjects(prev => prev.map((project, i) => 
+        setProjects(prev => prev.map((project, i) =>
           i === index ? { ...project, image: reader.result as string } : project
         ))
       }
@@ -846,7 +848,7 @@ export default function Component(): JSX.Element {
     if (field === 'id' && value) {
       const detectedType = detectMediaType(value)
       const displayName = getMediaDisplayName(value, detectedType)
-      
+
       setMediaItems(prev => prev.map((item, i) => {
         if (i === index) {
           const extractedId = extractMediaId(value, detectedType)
@@ -860,15 +862,15 @@ export default function Component(): JSX.Element {
         return item
       }))
     } else {
-      setMediaItems(prev => prev.map((item, i) => 
+      setMediaItems(prev => prev.map((item, i) =>
         i === index ? { ...item, [field]: value } : item
       ))
     }
   }
 
   const addMedia = () => {
-    setMediaItems(prev => [...prev, { 
-      id: '', 
+    setMediaItems(prev => [...prev, {
+      id: '',
       type: 'youtube',
       rawUrl: ''
     }])
@@ -910,10 +912,10 @@ export default function Component(): JSX.Element {
       const canvas = document.createElement('canvas')
       const scaleX = cropState.imageRef.naturalWidth / cropState.imageRef.width
       const scaleY = cropState.imageRef.naturalHeight / cropState.imageRef.height
-      
+
       canvas.width = crop.width
       canvas.height = crop.height
-      
+
       const ctx = canvas.getContext('2d')
       if (!ctx) {
         console.error('Failed to get canvas context')
@@ -934,7 +936,7 @@ export default function Component(): JSX.Element {
 
       const base64Image = canvas.toDataURL('image/jpeg', 0.9)
       setProfile(prev => ({ ...prev, image: base64Image }))
-      
+
       setShowCropDialog(false)
       setTempImage('')
       setImageLoading(false)
@@ -962,7 +964,7 @@ export default function Component(): JSX.Element {
   }
 
   const ImageDisplay = () => (
-    <div 
+    <div
       className="relative w-32 h-32 overflow-hidden rounded-lg"
       role="img"
       aria-label={imageError ? "Error loading profile image" : "Profile image"}
@@ -977,14 +979,13 @@ export default function Component(): JSX.Element {
           <p className="text-sm text-center px-2">{imageError}</p>
         </div>
       )}
-      <Image 
-        src={profile.image} 
-        alt="Profile" 
+      <Image
+        src={profile.image}
+        alt="Profile"
         fill
         sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-        className={`rounded-lg object-cover transition-opacity duration-300 ${
-          imageLoading ? 'opacity-0' : 'opacity-100'
-        }`}
+        className={`rounded-lg object-cover transition-opacity duration-300 ${imageLoading ? 'opacity-0' : 'opacity-100'
+          }`}
         onLoad={() => setImageLoading(false)}
         onError={() => setImageError("Failed to load image")}
       />
@@ -1014,19 +1015,19 @@ export default function Component(): JSX.Element {
   const [shopItems, setShopItems] = useState<ShopItem[]>([])
 
   const handleShopItemChange = (index: number, field: string, value: string) => {
-    const updatedItems = shopItems.map((item, i) => 
+    const updatedItems = shopItems.map((item, i) =>
       i === index ? {
         ...item,
         [field]: value,
         ...(field === 'storeUrl' ? {
           platform: (value.includes('shopify.com') ? 'shopify' :
-                   value.includes('etsy.com') ? 'etsy' :
-                   value.includes('gumroad.com') ? 'gumroad' :
-                   value.includes('bigcartel.com') ? 'bigcartel' : 'other') as ShopItem['platform']
+            value.includes('etsy.com') ? 'etsy' :
+              value.includes('gumroad.com') ? 'gumroad' :
+                value.includes('bigcartel.com') ? 'bigcartel' : 'other') as ShopItem['platform']
         } : {})
       } : item
     )
-    
+
     setShopItems(updatedItems)
     debouncedSave({
       profile,
@@ -1076,7 +1077,7 @@ export default function Component(): JSX.Element {
   const handleShopImageChange = (index: number, file: File | null) => {
     if (file) {
       const isValidImage = file.type.startsWith('image/')
-      
+
       if (!isValidImage) {
         console.error("Please upload an image file")
         return
@@ -1084,7 +1085,7 @@ export default function Component(): JSX.Element {
 
       const reader = new FileReader()
       reader.onloadend = () => {
-        setShopItems(prev => prev.map((item, i) => 
+        setShopItems(prev => prev.map((item, i) =>
           i === index ? { ...item, image: reader.result as string } : item
         ))
       }
@@ -1094,8 +1095,8 @@ export default function Component(): JSX.Element {
 
   return (
     <div className="dark min-h-screen bg-gray-900 text-gray-100">
-      <Navbar 
-        isAuthenticated={isAuthenticated} 
+      <Navbar
+        isAuthenticated={isAuthenticated}
         onLoginToggle={handleLoginToggle}
       />
       {isLoading ? (
@@ -1123,20 +1124,19 @@ export default function Component(): JSX.Element {
             `
           }} />
           <div className="p-4 sm:p-8 md:p-12 lg:p-16 min-h-screen flex flex-col">
-            <div className={`max-w-6xl mx-auto w-full flex-grow transition-opacity duration-150 ${
-              isTransitioning ? 'opacity-0' : 'opacity-100'
-            }`}>
+            <div className={`max-w-6xl mx-auto w-full flex-grow transition-opacity duration-150 ${isTransitioning ? 'opacity-0' : 'opacity-100'
+              }`}>
               {isAuthenticated && isEditing ? (
                 <div className="space-y-8 rounded-lg bg-gray-800/50 p-6">
                   <div className="flex items-center gap-4 mb-4">
                     <h3 className="text-xl font-semibold">Profile Details</h3>
                     <div className="flex-grow border-t border-gray-700" />
                   </div>
-                  <form 
-                    onSubmit={(e) => { 
+                  <form
+                    onSubmit={(e) => {
                       e.preventDefault()
                       handleSave()
-                    }} 
+                    }}
                     className="space-y-16"
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
@@ -1147,7 +1147,7 @@ export default function Component(): JSX.Element {
                     <div className="space-y-8">
                       <div>
                         <Label htmlFor="profileImage">Profile Image</Label>
-                        <div 
+                        <div
                           role="button"
                           aria-label="Upload profile image"
                           onDrop={handleDrop}
@@ -1165,11 +1165,11 @@ export default function Component(): JSX.Element {
                               </p>
                             </div>
                             <Label htmlFor="fileInput" className="cursor-pointer">
-                              <Button 
-                                type="button" 
-                                variant="outline" 
-                                size="sm" 
-                                className="mt-2" 
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="mt-2"
                                 aria-label="Upload profile image"
                                 onClick={() => {
                                   document.getElementById('fileInput')?.click()
@@ -1179,17 +1179,17 @@ export default function Component(): JSX.Element {
                                 Upload Image
                               </Button>
                             </Label>
-                            <Input 
-                              id="fileInput" 
-                              type="file" 
-                              accept="image/*" 
+                            <Input
+                              id="fileInput"
+                              type="file"
+                              accept="image/*"
                               onChange={(e) => {
                                 const files = e.target.files
                                 if (files && files.length > 0) {
                                   handleImageChange(files[0])
                                   e.target.value = ''
                                 }
-                              }} 
+                              }}
                               className="hidden"
                             />
                           </div>
@@ -1242,7 +1242,7 @@ export default function Component(): JSX.Element {
                     <div className="space-y-8 pt-8 border-t border-gray-700">
                       <div>
                         <h3 className="text-xl font-semibold">Social Links</h3>
-                        <SocialLinks 
+                        <SocialLinks
                           socialLinks={profile.socialLinks}
                           onSocialLinkChange={handleSocialLinkChange}
                           onAddSocialLink={addSocialLink}
@@ -1311,135 +1311,23 @@ export default function Component(): JSX.Element {
                         </div>
                       </div>
                     </div>
-
                     <div className="space-y-8 pt-8 border-t border-gray-700">
-                      <div>
-                        <h3 className="text-xl font-semibold">Spotlight</h3>
-                        <p className="text-sm text-gray-400 mt-2">
-                          Add links and info about your projects, collaborations, friends,anything.
-                        </p>
-                      </div>
-                      <Accordion type="single" collapsible className="w-full">
-                        {projects.map((project, index) => (
-                          <AccordionItem key={project.id} value={`item-${index}`}>
-                            <AccordionTrigger className="text-left">
-                              {project.title || `Project ${index + 1}`}
-                            </AccordionTrigger>
-                            <AccordionContent>
-                              <Card className="mb-4 p-4 bg-gray-700">
-                                <CardContent className="space-y-4">
-                                  <div>
-                                    <Label htmlFor={`project-title-${index}`}>Title</Label>
-                                    <Input
-                                      id={`project-title-${index}`}
-                                      value={project.title}
-                                      onChange={(e) => handleProjectChange(index, 'title', e.target.value)}
-                                      className="mt-1"
-                                    />
-                                  </div>
-                                  <div>
-                                    <Label htmlFor={`project-description-${index}`}>Description</Label>
-                                    <Textarea
-                                      id={`project-description-${index}`}
-                                      value={project.description}
-                                      onChange={(e) => handleProjectChange(index, 'description', e.target.value)}
-                                      className="mt-1"
-                                    />
-                                  </div>
-                                  <div>
-                                    <Label htmlFor={`project-link-${index}`}>Link</Label>
-                                    <Input
-                                      id={`project-link-${index}`}
-                                      value={project.link}
-                                      onChange={(e) => handleProjectChange(index, 'link', e.target.value)}
-                                      className="mt-1"
-                                    />
-                                  </div>
-                                  <div>
-                                    <Label htmlFor={`project-image-${index}`}>Project Image</Label>
-                                    <p className="text-sm text-gray-400 mt-1 mb-2">
-                                      Supports JPG, PNG, and GIFs under 5MB
-                                    </p>
-                                    <div className="mt-2 flex items-center space-x-4">
-                                      {project.image && (
-                                        <div className="relative w-24 h-24 rounded-lg overflow-hidden">
-                                          <Image src={project.image} alt={project.title} fill className="object-cover" />
-                                        </div>
-                                      )}
-                                      <Input
-                                        id={`project-image-${index}`}
-                                        type="file"
-                                        accept="image/*"
-                                        onChange={(e) => {
-                                          const files = e.target.files
-                                          if (files && files.length > 0) {
-                                            handleProjectImageChange(index, files[0])
-                                          }
-                                        }}
-                                      />
-                                    </div>
-                                  </div>
-                                  <Button type="button" variant="destructive" onClick={() => removeProject(index)}>
-                                    <Trash2 className="w-4 h-4 mr-2" /> Remove Project
-                                  </Button>
-                                </CardContent>
-                              </Card>
-                            </AccordionContent>
-                          </AccordionItem>
-                        ))}
-                      </Accordion>
-                      <Button type="button" onClick={addProject} className="mt-2">
-                        <Plus className="w-4 h-4 mr-2" /> Add Project
-                      </Button>
+                      <SpotlightSection
+                        projects={projects}
+                        onProjectChange={handleProjectChange}
+                        onAddProject={addProject}
+                        onRemoveProject={removeProject}
+                        onImageChange={handleProjectImageChange}
+                      />
                     </div>
 
                     <div className="space-y-8 pt-8 border-t border-gray-700">
-                      <div>
-                        <h3 className="text-xl font-semibold">Media</h3>
-                        <p className="text-sm text-gray-400 mt-2">
-                          Share your music, videos, and playlists from YouTube, SoundCloud, Spotify, and Apple Music.
-                        </p>
-                      </div>
-                      <Accordion type="single" collapsible className="w-full">
-                        {mediaItems.map((media, index) => (
-                          <AccordionItem key={index} value={`media-${index}`}>
-                            <AccordionTrigger className="text-left">
-                              {media.id ? getMediaDisplayName(media.rawUrl || '', media.type) : `New Media`}
-                            </AccordionTrigger>
-                            <AccordionContent>
-                              <Card className="mb-4 p-4 bg-gray-700">
-                                <CardContent className="space-y-4">
-                                  <div>
-                                    <Label htmlFor={`media-url-${index}`}>Media URL</Label>
-                                    <div className="space-y-2">
-                                      <Input
-                                        id={`media-url-${index}`}
-                                        value={media.rawUrl || media.id}
-                                        onChange={(e) => handleMediaChange(index, 'id', e.target.value)}
-                                        placeholder="Paste URL from YouTube, SoundCloud, Spotify, or Apple Music"
-                                      />
-                                      <p className="text-xs text-gray-400">
-                                        Supports: YouTube videos, SoundCloud tracks & playlists, Spotify tracks & playlists, Apple Music playlists
-                                      </p>
-                                    </div>
-                                    {media.id && (
-                                      <div className="mt-4 border border-gray-700 rounded-lg overflow-hidden">
-                                        <MediaEmbed item={media} />
-                                      </div>
-                                    )}
-                                  </div>
-                                  <Button type="button" variant="destructive" onClick={() => removeMedia(index)}>
-                                    <Trash2 className="w-4 h-4 mr-2" /> Remove Media
-                                  </Button>
-                                </CardContent>
-                              </Card>
-                            </AccordionContent>
-                          </AccordionItem>
-                        ))}
-                      </Accordion>
-                      <Button type="button" onClick={addMedia} className="mt-2">
-                        <Plus className="w-4 h-4 mr-2" /> Add Media
-                      </Button>
+                      <MediaSection 
+                        mediaItems={mediaItems}
+                        onMediaChange={handleMediaChange}
+                        onAddMedia={addMedia}
+                        onRemoveMedia={removeMedia}
+                      />
                     </div>
 
                     <div className="space-y-8 pt-8 border-t border-gray-700">
@@ -1472,7 +1360,7 @@ export default function Component(): JSX.Element {
                                       placeholder="e.g., My Etsy Shop"
                                     />
                                   </div>
-                                  
+
                                   <div>
                                     <Label htmlFor={`store-url-${index}`}>Store URL</Label>
                                     <Input
@@ -1492,10 +1380,10 @@ export default function Component(): JSX.Element {
                                     <div className="mt-2 flex items-center space-x-4">
                                       {item.image && (
                                         <div className="relative w-24 h-24 rounded-lg overflow-hidden">
-                                          <Image 
-                                            src={item.image} 
-                                            alt={item.title || 'Store image'} 
-                                            fill 
+                                          <Image
+                                            src={item.image}
+                                            alt={item.title || 'Store image'}
+                                            fill
                                             className="object-cover"
                                           />
                                         </div>
@@ -1514,9 +1402,9 @@ export default function Component(): JSX.Element {
                                     </div>
                                   </div>
 
-                                  <Button 
-                                    type="button" 
-                                    variant="destructive" 
+                                  <Button
+                                    type="button"
+                                    variant="destructive"
                                     onClick={() => removeShopItem(index)}
                                   >
                                     <Trash2 className="w-4 h-4 mr-2" /> Remove Store
@@ -1557,10 +1445,10 @@ export default function Component(): JSX.Element {
                                   <SelectItem value="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/daisy-blue-1sqZRfemKwLyREL0Eo89EfmQUT5wst.png">
                                     <div className="flex items-center">
                                       <div className="w-8 h-8 mr-2 relative">
-                                        <Image 
-                                          src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/daisy-blue-1sqZRfemKwLyREL0Eo89EfmQUT5wst.png" 
-                                          alt="Blue Daisy" 
-                                          fill 
+                                        <Image
+                                          src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/daisy-blue-1sqZRfemKwLyREL0Eo89EfmQUT5wst.png"
+                                          alt="Blue Daisy"
+                                          fill
                                           className="object-contain"
                                           unoptimized
                                         />
@@ -1586,7 +1474,7 @@ export default function Component(): JSX.Element {
                                   </SelectItem>
                                 </SelectContent>
                               </Select>
-                              
+
                               <div className="w-20 h-20 relative mx-auto sticker-rotate">
                                 <Image
                                   src={sticker.image}
@@ -1607,8 +1495,8 @@ export default function Component(): JSX.Element {
                           <div className="text-sm text-gray-400">
                             Changes save automatically
                           </div>
-                          <Button 
-                            variant="ghost" 
+                          <Button
+                            variant="ghost"
                             size="sm"
                             type="button"
                             onClick={() => setPreviewMode(!previewMode)}
@@ -1616,8 +1504,8 @@ export default function Component(): JSX.Element {
                             {previewMode ? 'Exit Preview' : 'Preview'}
                           </Button>
                         </div>
-                        <Button 
-                          variant="outline" 
+                        <Button
+                          variant="outline"
                           onClick={() => setIsEditing(false)}
                           className="px-6 py-2 text-lg border-2 border-cyan-300/60 hover:border-cyan-300/80 transition-colors"
                         >
@@ -1646,8 +1534,8 @@ export default function Component(): JSX.Element {
                           </ReactCrop>
                         </div>
                         <div className="flex justify-end mt-4 space-x-2 pt-4 border-t border-gray-700">
-                          <Button 
-                            variant="outline" 
+                          <Button
+                            variant="outline"
                             onClick={() => {
                               setShowCropDialog(false)
                               setTempImage('')
@@ -1655,7 +1543,7 @@ export default function Component(): JSX.Element {
                           >
                             Cancel
                           </Button>
-                          <Button 
+                          <Button
                             onClick={() => {
                               if (cropState.completedCrop) {
                                 handleCropComplete(cropState.completedCrop)
@@ -1684,14 +1572,14 @@ export default function Component(): JSX.Element {
                         />
                       </div>
                     </div>
-                    
+
                     <div className="w-full lg:w-1/2 flex flex-col items-center lg:items-center text-center">
                       <div className="space-y-6 lg:space-y-8 max-w-sm">
                         <div>
                           <h1 className="text-3xl sm:text-4xl font-bold text-cyan-300">{profile.name}</h1>
                           <h2 className="text-lg sm:text-xl text-gray-200">{profile.title}</h2>
                         </div>
-                        
+
                         <div>
                           <p className="text-sm sm:text-base text-gray-300">{profile.bio}</p>
                         </div>
@@ -1724,12 +1612,12 @@ export default function Component(): JSX.Element {
                               default:
                                 Icon = User
                             }
-                            
+
                             return (
-                              <Button 
-                                key={index} 
-                                variant="ghost" 
-                                size="icon" 
+                              <Button
+                                key={index}
+                                variant="ghost"
+                                size="icon"
                                 className={`w-10 h-10 sm:w-12 sm:h-12 group relative ${!link.url ? 'opacity-40 hover:opacity-100' : ''}`}
                                 asChild={!!link.url}
                               >
@@ -1753,12 +1641,12 @@ export default function Component(): JSX.Element {
                         </div>
 
                         {isAuthenticated && (
-                          <Button 
-                            onClick={() => setIsEditing(true)} 
-                            variant="outline" 
+                          <Button
+                            onClick={() => setIsEditing(true)}
+                            variant="outline"
                             className="mt-4 border-cyan-300/30 hover:border-cyan-300/80 transition-colors group"
                           >
-                            <Edit2 className="mr-2 h-4 w-4 group-hover:text-cyan-300" /> 
+                            <Edit2 className="mr-2 h-4 w-4 group-hover:text-cyan-300" />
                             <span className="group-hover:text-cyan-300">Edit Profile</span>
                             <span className="ml-2 text-xs text-gray-400">(Add your content)</span>
                           </Button>
@@ -1767,8 +1655,8 @@ export default function Component(): JSX.Element {
                     </div>
                   </div>
                   {profile.sectionVisibility.projects && (
-                    <div className="mt-24 sm:mt-32 max-w-6xl mx-auto px-4 mb-24 opacity-0 animate-fadeIn" 
-                         style={{ animationDelay: '150ms', animationFillMode: 'forwards' }}>
+                    <div className="mt-24 sm:mt-32 max-w-6xl mx-auto px-4 mb-24 opacity-0 animate-fadeIn"
+                      style={{ animationDelay: '150ms', animationFillMode: 'forwards' }}>
                       <h2 className="text-3xl font-semibold text-white text-center mb-4">
                         SPOTLIGHT
                       </h2>

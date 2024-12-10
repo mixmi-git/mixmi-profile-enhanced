@@ -16,57 +16,46 @@ A Next.js-based profile page system with Web3 authentication and rich media feat
 newer-profile-test/
 ├── app/
 │ ├── page.tsx                    # Main entry point
-│ └── UserProfile.tsx             # Core profile component
-├── components/
-│ ├── auth/
-│ │   └── auth.tsx               # Wallet integration
-│ ├── profile/
-│ │   └── SocialLinks.tsx        # Social links component
-│ ├── ui/
-│ │   └── accordion.tsx          # UI components
-│ └── media/                     # Media embed components
+│ └── components/
+│     ├── profile/               # Profile-specific components
+│     │   ├── SocialLinks.tsx    # Social media links management
+│     │   ├── SpotlightSection.tsx # Projects/spotlight section
+│     │   └── MediaSection.tsx   # Media embeds management
+│     ├── media/
+│     │   └── MediaEmbed.tsx     # Media embedding component
+│     └── ui/                    # Shared UI components
 ├── types/
-│ └── global.d.ts               # Minimal type declarations
+│ └── media.ts                   # Media-related type definitions
 └── public/
-    └── images/                 # Static assets
+    └── images/                  # Static assets
 
-## Technical Stack
+## Recent Updates
 
-### Core Versions
-- Next.js: 14.2.16
-- React: [Current version - DO NOT UPDATE]
-- shadcn/ui components
+### Component Refactoring
+- ✅ Extracted SocialLinks into standalone component
+- ✅ Created SpotlightSection component for projects
+- ✅ Separated MediaSection and MediaEmbed components
+- ✅ Improved code organization and maintainability
+- ✅ Added proper TypeScript types for all components
 
-### Dependencies Status
-✅ All dependencies are up to date
-✅ No vulnerability warnings
-✅ Clean npm install (only funding notifications)
-
-### Known Working State
-- All core features functioning
-- Profile display and image handling working
-- Project cards displaying correctly
-- Media embeds operational
-- Store accordion fully functional
-- Social links component extracted and working
-
-### Recent Updates
-- Added Store accordion functionality
-- Implemented store image upload and persistence
-- Extracted SocialLinks into separate component
-- Fixed store data management
-
-### ⚠️ Important Notes
-1. DO NOT update React version - known to cause breaking changes
-2. Exercise caution when updating any dependencies
-3. Test thoroughly after any modification
+### Next Steps
+- [ ] Extract Shop section into component
+- [ ] Create shared ImageUpload component
+- [ ] Add error boundaries
+- [ ] Improve loading states
 
 ## Development Guidelines
 
 1. Make minimal, incremental changes
-2. Test immediately after each change
+2. Test thoroughly after each change
 3. Document any modifications
 4. Maintain working version commits
+
+### Important Notes
+- All core features functioning
+- Components properly separated
+- Media embeds working correctly
+- Project structure improved
 
 
 
