@@ -1338,9 +1338,9 @@ export default function Component(): JSX.Element {
 
                     <div className="space-y-8 pt-8 border-t border-gray-700">
                       <div>
-                        <h3 className="text-xl font-semibold">Projects</h3>
+                        <h3 className="text-xl font-semibold">Spotlight</h3>
                         <p className="text-sm text-gray-400 mt-2">
-                          Add and manage your projects.
+                          Add links and info about your projects, collaborations, friends,anything.
                         </p>
                       </div>
                       <Accordion type="single" collapsible className="w-full">
