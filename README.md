@@ -9,22 +9,26 @@ A Next.js-based profile page system with Web3 authentication and rich media feat
 - Media embeds (YouTube, SoundCloud, Apple Music)
 - Project showcase with consistent square image cards
 - Enhanced placeholder content
+- Shop/Store management with image uploads
 
 ## Project Structure
 
 newer-profile-test/
 ├── app/
-│ ├── page.tsx           # Main entry point
-│ └── UserProfile.tsx    # Core profile component
+│ ├── page.tsx                    # Main entry point
+│ └── UserProfile.tsx             # Core profile component
 ├── components/
 │ ├── auth/
-│ │   └── auth.tsx      # Wallet integration
-│ └── media/            # Media embed components
+│ │   └── auth.tsx               # Wallet integration
+│ ├── profile/
+│ │   └── SocialLinks.tsx        # Social links component
+│ ├── ui/
+│ │   └── accordion.tsx          # UI components
+│ └── media/                     # Media embed components
 ├── types/
-│ └── global.d.ts       # Minimal type declarations
+│ └── global.d.ts               # Minimal type declarations
 └── public/
-    └── images/         # Static assets
-
+    └── images/                 # Static assets
 
 ## Technical Stack
 
@@ -43,9 +47,14 @@ newer-profile-test/
 - Profile display and image handling working
 - Project cards displaying correctly
 - Media embeds operational
+- Store accordion fully functional
+- Social links component extracted and working
 
-### Known Issues
-- Store accordion in Shop section not functioning (low priority)
+### Recent Updates
+- Added Store accordion functionality
+- Implemented store image upload and persistence
+- Extracted SocialLinks into separate component
+- Fixed store data management
 
 ### ⚠️ Important Notes
 1. DO NOT update React version - known to cause breaking changes

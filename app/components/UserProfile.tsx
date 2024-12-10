@@ -23,6 +23,7 @@ import 'react-image-crop/dist/ReactCrop.css'
 import { parseGIF, decompressFrames } from 'gifuct-js'
 import { useAuth } from "@/lib/auth"
 import { exampleProjects, exampleMediaItems, exampleShopItems } from '@/lib/example-content'
+import { SocialLinks } from "@/components/profile/SocialLinks"
 
 // Add custom TikTok icon component
 const TikTokIcon = () => (
@@ -1239,40 +1240,15 @@ export default function Component(): JSX.Element {
                     </div>
 
                     <div className="space-y-8 pt-8 border-t border-gray-700">
-                      <h3 className="text-xl font-semibold">Social Links</h3>
-                      {profile.socialLinks.map((link, index) => (
-                        <div key={index} className="flex items-center space-x-2 mb-2">
-                          <Select
-                            value={link.platform}
-                            onValueChange={(value) => handleSocialLinkChange(index, 'platform', value)}
-                          >
-                            <SelectTrigger className="w-[180px]">
-                              <SelectValue placeholder="Select platform" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="youtube">YouTube</SelectItem>
-                              <SelectItem value="tiktok">TikTok</SelectItem>
-                              <SelectItem value="instagram">Instagram</SelectItem>
-                              <SelectItem value="twitter">Twitter</SelectItem>
-                              <SelectItem value="spotify">Spotify</SelectItem>
-                              <SelectItem value="soundcloud">SoundCloud</SelectItem>
-                              <SelectItem value="linkedin">LinkedIn</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <Input
-                            value={link.url}
-                            onChange={(e) => handleSocialLinkChange(index, 'url', e.target.value)}
-                            placeholder="Profile URL"
-                            className="flex-grow"
-                          />
-                          <Button type="button" variant="ghost" size="icon" onClick={() => removeSocialLink(index)}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ))}
-                      <Button type="button" onClick={addSocialLink} className="mt-2">
-                        <Plus className="w-4 h-4 mr-2" /> Add Social Link
-                      </Button>
+                      <div>
+                        <h3 className="text-xl font-semibold">Social Links</h3>
+                        <SocialLinks 
+                          socialLinks={profile.socialLinks}
+                          onSocialLinkChange={handleSocialLinkChange}
+                          onAddSocialLink={addSocialLink}
+                          onRemoveSocialLink={removeSocialLink}
+                        />
+                      </div>
                     </div>
 
                     <div className="space-y-8 pt-8 border-t border-gray-700">
